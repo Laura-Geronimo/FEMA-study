@@ -86,6 +86,6 @@ table(Dis3$incidentType)
 
 
 ##Writing out files
-path1 <- '/DisasterData/Edited'
+path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/DisasterData")
 write.csv(Dis, file.path(path1, "DisAll.csv"), row.names=TRUE)
-write.csv(Dis3, file.path(path1, "DisSome.csv"), row.names=TRUE)
+write.csv(Dis3, file.path(path1, "DisFloodStorm.csv"), row.names=TRUE)
