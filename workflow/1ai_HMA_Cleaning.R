@@ -44,10 +44,10 @@ table(properties$typeOfResidency)
 sum(properties$numberOfProperties) #214748
 colSums(is.na(properties))
 
-#expanding properties dataset: 1 property per row####
+#Expanding properties dataset: 1 property per row####
 properties_long <- properties[rep(row.names(properties), properties$numberOfProperties),] #214748 obs
 
-#subsetting to those with a DN####
+#Subsetting to those with a DN####
 properties_DN <- subset(properties_long, disasterNumber!="NA") #180034 obs
 colSums(is.na(properties_DN))
 
@@ -182,7 +182,8 @@ replacements <- c(
   "Wind Retrofit Basic (A-P804)" = "Wind Retrofit",
   "Wind Retrofit Basic (B-P804)" = "Wind Retrofit",
   "Wind Retrofit Estimated(ES-P804)" = "Wind Retrofit",
-  "Wind Retrofit Intermediate(I-P804)" = "Wind Retrofit"
+  "Wind Retrofit Intermediate(I-P804)" = "Wind Retrofit",
+  "Wind Retrofit Advanced(A-P804) " = "Wind Retrofit"
 )
 
 # Apply the replacements
@@ -192,79 +193,137 @@ myHMA$propertyAction3 <- ifelse(myHMA$propertyAction2 %in% names(replacements), 
 table(myHMA$propertyAction)
 table(myHMA$propertyAction3)
 
-## GOT HERE ####
 
-
-#simplifying typeOfResidency ####
+#Simplifying typeOfResidency ####
 #examine NAs on typeOfResidency
-table(is.na(myHMA$propertyAction)) #20,580 missing
+table(is.na(myHMA$typeOfResidency)) #73,545 missing
 
-#select sample with missing data on property action, and examine table to see if data is available on other columns 
-typeOfResidency_NA <- myHMA[is.na(myHMA$typeOfResidency),]
-colSums(is.na(typeOfResidency_NA ))
-#looks like there are indicators of "private" and "public" property types in the structureType and p2ProjectType fields
+# Examining NAs on type of residency
+table(myHMA$typeOfResidency)
+NAs_Res <- myHMA %>% filter(is.na(typeOfResidency))
 
+# Obtain unique project type data on NAs_Res, which will be used for imputing missing residential type data (Private vs. Public)
+unique_p2projectType <- unique(NAs_Res$p2projectType)
+length(unique_p2projectType) # 214 unique
+NAs_Res2 <- data.frame(p2projectType = unique_p2projectType)
 
-# Create a new dataframe with unique structureType entries
-residential_types <- myHMA %>% 
-  distinct(structureType) %>% 
-  mutate(my_Private = 0,
-         my_Public = 0,
-         my_Non_residential=0)
+# Classify project types
+NAs_Res2 <- NAs_Res2 %>%
+  mutate(my_Private = if_else(str_detect(p2projectType, "Private"), 1, 0),
+         my_Public = if_else(str_detect(p2projectType, "Public"), 1, 0))
 
-# Define keywords and corresponding columns
-keywords <- list(
-  "Private" = "my_Private",
-  "Public" = "my_Public",
-  "Non-residential"= "my_Non_residential"
-)
+# Determine type of residency
+NAs_Res2 <- NAs_Res2 %>%
+  mutate(Total = my_Private + my_Public,
+         my_typeOfResidency = case_when(
+           Total == 1 & my_Private == 1 ~ "Private",
+           Total == 1 & my_Public == 1 ~ "Public",
+           Total == 0 ~ NA,
+           TRUE ~ "Mix"
+         ))
 
-# Update the flags based on keywords
-for (keyword in names(keywords)) {
-  residential_types[[keywords[[keyword]]]] <- str_detect(residential_types$p2projectType, keyword) %>% as.integer()
+NAs_Res3 <- NAs_Res2 %>% select(p2projectType, my_typeOfResidency)
+
+# Join with original data and update type of residency
+myHMA <- left_join(myHMA, NAs_Res3, by = "p2projectType")
+
+# Update my_typeOfResidency2 based on the original typeOfResidency
+myHMA<- myHMA%>%
+  mutate(typeOfResidency2 = if_else(is.na(typeOfResidency), my_typeOfResidency, typeOfResidency))
+
+table(myHMA$typeOfResidency)
+table(myHMA$typeOfResidency2)
+table(is.na(myHMA$typeOfResidency2))
+
+# Subset to primary and secondary & primary owner occupied, rental, and private 
+myHMA <- myHMA%>%
+  filter(typeOfResidency2 %in% c("Owner Occupied- Secondary Residence",
+                                    "Owner Occupied - Principal Residence",
+                                    "Rental",
+                                    "Private"))
+
+# Developing Hazards from projectType data ####
+
+unique_hazards <- unique(myHMA$p2projectType)
+Hazards_U <- data.frame(p2projectType = unique_hazards)
+
+# Define the hazards
+hazards <- c("Wind", "Wildfire", "Flood", "Erosion", "Riverine", "Coastal", "Stormwater", "Seismic", "Landslide", "Snow Avalanche", "Tsunami")
+
+# Create binary columns for each hazard
+for (hazard in hazards) {
+  Hazards_U[[hazard]] <- as.integer(str_detect(Hazards_U$p2projectType, hazard))
 }
 
-# Sum the flags to check for multiple matches
-project_types <- project_types %>% 
-  mutate(Total = rowSums(select(., starts_with("my_"))))
+# Check the tables for each hazard
+sapply(hazards, function(hazard) table(Hazards_U[[hazard]]))
 
-# Filter based on the total flags
-see_0s <- project_types %>% filter(Total == 0)
-see_1s <- project_types %>% filter(Total == 1)
-see_2s <- project_types %>% filter(Total == 2)
+# Examining if there is more than one hazard to assign "Mix"
+Hazards_U$Total <- rowSums(Hazards_U[, hazards])
 
-# Assign typeOfResidency based on the flags
-project_types <- project_types %>%
-  rowwise() %>%
-  mutate(my_typeOfResidency = case_when(
-    Total == 1 & my_Acqui == 1 ~ "Acquisition",
-    Total == 1 & my_Elev == 1 ~ "Elevation",
-    Total == 1 & my_Floodproofed == 1 ~ "Floodproofed",
-    Total == 1 & my_MitigationReconstruction == 1 ~ "Mitigation Reconstruction",
-    Total == 1 & my_Other == 1 ~ "Other",
-    Total == 1 & my_SafeRoom == 1 ~ "Safe Room",
-    Total == 1 & my_Seismic == 1 ~ "Seismic Retrofit",
-    Total == 1 & my_Wildfire == 1 ~ "Wildfire Retrofit",
-    Total == 1 & my_WindRetrofit == 1 ~ "Wind Retrofit",
-    TRUE ~ "Mix"
-  ))
+# Classify hazards
+Hazards_U$myHazard <- apply(Hazards_U, 1, function(row) {
+  if (row["Total"] == 1) {
+    return(hazards[which(row[hazards] == 1)])
+  } else {
+    return("MultiHazard")
+  }
+})
 
-# Merge the updated project_types with the original data
-myHMA <- myHMA %>%
-  left_join(project_types %>% select(p2projectType, my_typeOfResidency), by = "p2projectType")
+# Select necessary columns
+Hazards_U2 <- Hazards_U[, c("p2projectType", "myHazard")]
+
+# Joining Hazards data
+myHMA <- left_join(myHMA, Hazards_U2, by = "p2projectType")
+
+#examining time####
+range(myHMA$programFy) #1998-2023
+
+
+#Selecting Variables to Keep ####
+#New fields created to keep: typeOfResidency2, propertyAction3, myHazard
+
+colSums(is.na(myHMA))
 names(myHMA)
+myHMA2 <-myHMA %>%
+  select(
+    id,
+    zip,
+    city, 
+    county, p2county, p2countyCode,
+    stateNumberCode, p2state,
+    region, p2region,
+    projectIdentifier,
+    propertyAction, propertyAction3,
+    structureType,
+    typeOfResidency, typeOfResidency2,
+    foundationType,
+    programArea,
+    programFy,
+    actualAmountPaid,
+    disasterNumber,
+    myHazard,
+    damageCategory,
+    p2projectType,
+    p2status,
+    p2subrecipient,
+    p2dateApproved,
+    p2dateClosed,
+    p2projectAmount,
+    p2federalShareObligated,
+    p2subrecipientAdminCostAmt,
+    p2recipientAdminCostAmt,
+    p2costSharePercentage,
+    p2benefitCostRatio,
+    p2netValueBenefits,
+    p2numberOfFinalProperties)
 
-# Update the typeOfResidency column with the assigned values
-myHMA$typeOfResidency2 <- myHMA$typeOfResidency
-myHMA$typeOfResidency2[is.na(myHMA$typeOfResidency)] <- myHMA$my_typeOfResidency[is.na(myHMA$typeOfResidency)]
+colSums(is.na(myHMA2))
 
-
-########################
-
-myHMA_NJ <- subset(myHMA, p2state=="New Jersey")
-myHMA_Ocean <- subset(myHMA, p2county=="Ocean" & p2state=="New Jersey")
+myHMA_NJ <- subset(myHMA2, p2state=="New Jersey")
+myHMA_Ocean <- subset(myHMA2, p2county=="Ocean" & p2state=="New Jersey")
 
 #writing out data
 path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA")
-write.csv(myHMA, file.path(path1, "myHMA.csv"), row.names=TRUE)
+write.csv(myHMA2, file.path(path1, "myHMA.csv"), row.names=TRUE)
 write.csv(myHMA_Ocean, file.path(path1, "myHMA_Ocean.csv"), row.names=TRUE)
