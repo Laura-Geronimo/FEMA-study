@@ -1,7 +1,6 @@
 #Purpose: pull time series data on socio-demographics from NHGIS
 
 
-
 # Setup 
 getwd()
 
