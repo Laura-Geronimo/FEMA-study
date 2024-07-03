@@ -36,6 +36,7 @@ nhgis_ds |>
 ## select your data table & examine metadata ####
 ds_meta90 <- get_metadata_nhgis(dataset = "1990_STF1")
 str(ds_meta90,1)
+head(ds_meta90$geog_levels)
 
 ## Filter for descriptions that = "Population" & decide what tables you want ####
 ds_meta90$data_tables |>
@@ -46,7 +47,7 @@ head(ds_meta22$geographic_instances)
 
 ## check geographic levels ####
 ds_meta22$geog_levels
-contains_zcta <- "zcta" %in% unlist(ds_meta22$geog_levels)
+contains_zcta <- "zcta" %in% unlist(ds_meta90$geog_levels)
 
 ## Define an extract request ####
 nhgis_ext22 <- define_extract_nhgis(

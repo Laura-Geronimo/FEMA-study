@@ -883,16 +883,32 @@ SE_PD <- read.csv("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census/S
 
 TS_ZCTA_13 <- left_join(TS_ZCTA_12, SE_PD, by="GZCTA", copy=F)
 
+##joining available 1990 data pulled from NHGIS ####
+y1990dec <- read.csv("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census/y1990dec.csv")
+TS_ZCTA_14 <- left_join(TS_ZCTA_13, y1990dec , by="GZCTA", copy=F)
+TS_ZCTA_14 <- TS_ZCTA_14 %>%
+  select(-c(X.x, X.y))
+
 #checking Time series data ####
-names(TS_ZCTA_13)
-colSums(is.na(TS_ZCTA_13))
+names(TS_ZCTA_14)
+colSums(is.na(TS_ZCTA_14))
+
+
+#checking for duplicates in ZCTAs ####
+duplicates_ZCTA_Census <- TS_ZCTA_14 %>%
+  group_by(GZCTA) %>%
+  filter(n() > 1)  #202 
+
+#obtaining distinct ZCTAs ####
+TS_ZCTA_14 <- TS_ZCTA_14 %>%
+  distinct(GZCTA, .keep_all = TRUE)
 
 #subsetting to Ortley Beach ####
-OB_TS_ZCTA <- subset(TS_ZCTA_13, GZCTA=="G08751")
+OB_TS_ZCTA <- subset(TS_ZCTA_14, GZCTA=="G08751")
 
 
 
 #writing out files ####
 path1 <- 'C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census'
-write.csv(TS_ZCTA_13, file.path(path1, "TS_ZCTA_Tidy.csv"), row.names=TRUE)
+write.csv(TS_ZCTA_14, file.path(path1, "TS_ZCTA_Tidy.csv"), row.names=TRUE)
 write.csv(OB_TS_ZCTA, file.path(path1, "OB_TS_ZCTA_Tidy.csv"), row.names=TRUE)

@@ -8,10 +8,13 @@ library(tidyverse)
 # Importing data
 myHMA <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/myHMA.csv')
 
-#read in disaster data
-DisDataRaw <- GET("https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries.json")
-DisDataRaw2 <- fromJSON(rawToChar(DisDataRaw$content))
-Dis <- as.data.frame(DisDataRaw2)
+#read in disaster data ####
+#DisDataRaw <- GET("https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries.json")
+#DisDataRaw2 <- fromJSON(rawToChar(DisDataRaw$content))
+#Dis <- as.data.frame(DisDataRaw2)
+
+#Reading from Archive
+Dis <- read.csv("C:/Users/lgero/Box/Research/FEMA_project/Data/Archive/Dis_07_03_24.csv")
 
 #EXploring Data
 names(Dis)
@@ -166,7 +169,23 @@ myHMA4 <- myHMA4 %>%
 
 table(myHMA4$incidentType)
 
-#writing out data
+#archiving raw Disaster data for replication ####
+#path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Archive")
+#write.csv(Dis, file.path(path1, "Dis_07_03_24.csv"), row.names=TRUE)
+
+
+# Dropping properties without clear ZCTAs ####
+#drop 33 rows without ZCTA data in HMA
+myHMA5  <- myHMA4 %>%
+  filter(!is.na(GZCTA))
+
+#dropping rows without clear ZCTA identifiers####
+myHMA6 <- myHMA5 %>%
+  filter(!(GZCTA %in% c("G.....", "G?????", "G_____", "G0<<>?", "G0>>>>", "G000??", "G000>?", "G000>>", "GXXXXX")))
+
+
+
+#writing out data####
 path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA")
-write.csv(myHMA4, file.path(path1, "myHMA4.csv"), row.names=TRUE)
+write.csv(myHMA6, file.path(path1, "myHMA6.csv"), row.names=TRUE)
 

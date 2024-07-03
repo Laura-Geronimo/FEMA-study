@@ -15,26 +15,29 @@ library(nnet)
 
 #Reading FEMA Properties data ####
 #note: extra steps were needed because strings like Rincon have an accent that was not reading in.
-properties <- GET("https://www.fema.gov/api/open/v4/HazardMitigationAssistanceMitigatedProperties.json") #note: V4 is latest release as of authorship
-raw_content <- rawToChar(properties$content)
+#properties <- GET("https://www.fema.gov/api/open/v4/HazardMitigationAssistanceMitigatedProperties.json") #note: V4 is latest release as of authorship
+#raw_content <- rawToChar(properties$content)
 
 # Step 1a: Inspect the raw content (optional, for debugging)
-print(substr(raw_content, 1, 1000))  # Print the first 1000 characters
+#print(substr(raw_content, 1, 1000))  # Print the first 1000 characters
 
 # Step 1b: 1Clean the content if necessary
-cleaned_content <- iconv(raw_content, "latin1", "ASCII", sub="")
+#cleaned_content <- iconv(raw_content, "latin1", "ASCII", sub="")
 
 # Step 1c: Parse the JSON content
-properties <- fromJSON(cleaned_content)
+#properties <- fromJSON(cleaned_content)
 
-properties <- as.data.frame(properties)
+#properties <- as.data.frame(properties)
 
+#reading from archive ####
+properties <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Archive/HMA_Properties_07_03_24.csv')
 
 #Cleaning Properties Data####
 
 ##Renaming columns####
 head(properties)
 colnames(properties) <- gsub(pattern="HazardMitigationAssistanceMitigatedProperties.",replacement="",x=colnames(properties))
+
 
 ##Exploring data ####
 range(properties$programFy) #1989-2023
@@ -54,28 +57,33 @@ colSums(is.na(properties_DN))
 ## BREAK ################
 
 #Reading in Projects data####
-projects <- GET("https://www.fema.gov/api/open/v4/HazardMitigationAssistanceProjects.json") #note: V4 is latest release as of authorship
-raw_content <- rawToChar(projects$content)
+#projects <- GET("https://www.fema.gov/api/open/v4/HazardMitigationAssistanceProjects.json") #note: V4 is latest release as of authorship
+#raw_content <- rawToChar(projects$content)
 
 # Step 1a: Inspect the raw content (optional, for debugging)
-print(substr(raw_content, 1, 1000))  # Print the first 1000 characters
+#print(substr(raw_content, 1, 1000))  # Print the first 1000 characters
 
 # Step 1b: 1Clean the content if necessary
-cleaned_content <- iconv(raw_content, "latin1", "ASCII", sub="")
+#cleaned_content <- iconv(raw_content, "latin1", "ASCII", sub="")
 
 # Step 1c: Parse the JSON content
-projects <- fromJSON(cleaned_content)
+#projects <- fromJSON(cleaned_content)
 
-projects <- as.data.frame(projects)
+#projects <- as.data.frame(projects)
 
 #Cleaning projects Data####
-colnames(projects) <- gsub(pattern="HazardMitigationAssistanceProjects.",replacement="",x=colnames(projects))
+#colnames(projects) <- gsub(pattern="HazardMitigationAssistanceProjects.",replacement="",x=colnames(projects))
 
 #adding prefix using the paste function in R to distinguish columns that came from the project file, except join field
-original_cols <- colnames(projects)
-print(original_cols)
-colnames(projects)<- paste("p2", original_cols, sep="")
-names(projects)[names(projects)=="p2projectIdentifier"]<-"projectIdentifier" #this is the join field
+#original_cols <- colnames(projects)
+#print(original_cols)
+#colnames(projects)<- paste("p2", original_cols, sep="")
+#names(projects)[names(projects)=="p2projectIdentifier"]<-"projectIdentifier" #this is the join field
+
+
+
+#reading from archive ####
+projects <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Archive/HMA_Projects_07_03_24.csv')
 
 
 ## BREAK ################
@@ -88,7 +96,7 @@ colSums(is.na(myHMA))
 colSums(is.na(myHMA))
 
 #examine NAs on Property Action 
-table(is.na(myHMA$propertyAction)) #20,580 missing
+table(is.na(myHMA$propertyAction)) #13,931 missing
 
 #select sample with missing data on property action, and examining if data is available on other columns 
 propertyAction_NA <- myHMA[is.na(myHMA$propertyAction),]
@@ -99,6 +107,7 @@ unique_project_types <- unique(propertyAction_NA$p2projectType)
 ProjectType_propertyAction_NA<- as.data.frame(table(unique_project_types))
 
 # Create a new dataframe with unique p2projectType entries
+names(myHMA)
 project_types <- myHMA %>% 
   distinct(p2projectType) %>% 
   mutate(my_Elev = 0,
@@ -172,7 +181,7 @@ myHMA$propertyAction3 <- myHMA$propertyAction2
 
 # Create a named vector for mapping the replacements
 replacements <- c(
-  "Acquisition of Vacant Land" = "Acquisition",
+  "Acquisition of Vacant Land" = "Acquisition_VacantLand",
   "Acquisition/Demolition" = "Acquisition",
   "Acquisition/Relocation" = "Acquisition",
   "Mix" = "Other",
@@ -183,7 +192,7 @@ replacements <- c(
   "Wind Retrofit Basic (B-P804)" = "Wind Retrofit",
   "Wind Retrofit Estimated(ES-P804)" = "Wind Retrofit",
   "Wind Retrofit Intermediate(I-P804)" = "Wind Retrofit",
-  "Wind Retrofit Advanced(A-P804) " = "Wind Retrofit"
+  "Wind Retrofit Advanced(A-P804)" = "Wind Retrofit"
 )
 
 # Apply the replacements
@@ -320,10 +329,21 @@ myHMA2 <-myHMA %>%
 
 colSums(is.na(myHMA2))
 
-myHMA_NJ <- subset(myHMA2, p2state=="New Jersey")
-myHMA_Ocean <- subset(myHMA2, p2county=="Ocean" & p2state=="New Jersey")
+# subset to Elevations and Acquisitions ####
+table(myHMA2$propertyAction3)
 
-#writing out data
+myHMA2b <- subset(myHMA2, 
+                  propertyAction3=="Acquisition" |
+                  propertyAction3=="Elevation")
+
+myHMA_NJ <- subset(myHMA2b, p2state=="New Jersey")
+myHMA_Ocean <- subset(myHMA2b, p2county=="Ocean" & p2state=="New Jersey")
+
+#archiving raw HMA data for replication ####
+#path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Archive")
+#write.csv(properties, file.path(path1, "HMA_Properties_07_03_24.csv"), row.names=TRUE)
+#write.csv(projects, file.path(path1, "HMA_Projects_07_03_24.csv"), row.names=TRUE)
+
+#writing out processed data ####
 path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA")
-write.csv(myHMA2, file.path(path1, "myHMA.csv"), row.names=TRUE)
-write.csv(myHMA_Ocean, file.path(path1, "myHMA_Ocean.csv"), row.names=TRUE)
+write.csv(myHMA2b, file.path(path1, "myHMA.csv"), row.names=TRUE)
