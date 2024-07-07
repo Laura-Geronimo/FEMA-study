@@ -1,0 +1,3690 @@
+
+
+---
+title: "Supplementary Information: Descriptive Statistics"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    theme: united
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+getwd()
+
+##Libraries
+library(dplyr)
+library(stringr)
+library(Hmisc)
+library(tidycensus)
+library(corrplot)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+library(viridis)
+
+library(forcats)
+library(boot)
+library(lmtest)
+library(sandwich)
+library(ggpubr)
+
+options (scipen=999)
+
+#importing data
+DNZ15 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZ_V1.csv')
+
+names(DNZ15)
+DNZ15 <- DNZ15[,c(-1)]
+
+#creating subsets
+DNZ15_lessMix <- subset(DNZ15, felev==0 | felev==1)
+DNZ15_After1993 <- subset(DNZ15, fyDeclared >1993)
+DNZ15_WOSandy <- subset(DNZ15, HurricaneName!="sandy")
+DNZ15_WOKatrina <- subset(DNZ15, HurricaneName!="katrina") 
+DNZ15_ZCTA_shore <- subset(DNZ15, ZCTA_shore==1) 
+
+DNZ15_Katrina <- subset(DNZ15, HurricaneName=="katrina") 
+DNZ15_Sandy <- subset(DNZ15, HurricaneName=="sandy") 
+DNZ15_Mix <- subset(DNZ15, felev>0 & felev<1)
+
+```
+
+
+## Descriptive Statistics: 
+### Full Sample 
+```{r include=FALSE}
+#Full Set: descriptive statistics
+names(DNZ15)
+range(DNZ15$DD)
+table(DNZ15$incidentTypeB)
+sum(DNZ15$TotalProps)
+sum(DNZ15$Elev)
+sum(DNZ15$Acqui)
+DS_all <- DNZ15[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+names(DS_all)
+describe(DS_all)
+
+
+DS_all2  <- stat.desc(DS_all, basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+
+DS_all3<-DS_all2[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_all3)
+names(DS_all3)[names(DS_all3)=="felev"]<- "felev"
+names(DS_all3)[names(DS_all3)=="Elev"]<- "Total Elevations"
+names(DS_all3)[names(DS_all3)=="Acqui"]<- "Total Acquisitions"
+names(DS_all3)[names(DS_all3)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_all3)[names(DS_all3)=="fWhite"]<- "Fraction White"
+names(DS_all3)[names(DS_all3)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_all3)[names(DS_all3)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_all3)[names(DS_all3)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_all3)[names(DS_all3)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_all3)[names(DS_all3)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_all3)[names(DS_all3)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_all3)[names(DS_all3)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+names(DS_all3)
+```
+
+```{r echo=FALSE}
+knitr::kable(DS_all3,
+            caption="Descriptive Statistics")
+
+```
+
+### Scatterplot Matrix: Full Sample
+```{r include=FALSE}
+DNZ15_scatter <- DNZ15[,c("felev",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k")]
+
+names(DNZ15_scatter)[names(DNZ15_scatter)=="felev"]<- "felev"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="MHVadj_W_100k"]<- "Median Home\n Value $100k (W)"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="fWhite"]<- "Fraction White"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="RepRate"]<- "County Republican\n Vote Rate"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="count_fema_sfha_W_1k"]<- "Count of HU in\n FEMA SFHA 1k (W)"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est.\n $10M (W)"
+names(DNZ15_scatter)[names(DNZ15_scatter)=="TotPop_W_10k"]<- "Total Population\n 10k (W)"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#scatterplotMatrix(DNZ15_scatter, spread=FALSE, smoother.args=list(lty=2), main="Scatter Plot Matrix")
+
+```
+
+### Descriptive Statistics: Subsets of interest
+
+#### Descriptive Statistics: DNZs with only acquisitions, no elevations (f_elev < 0.99) (n=3467 DNZs)
+```{r include=FALSE}
+
+DS_4 <- subset(DS_all, felev < 0.01)
+
+DS_4b  <- stat.desc(DS_4 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_4c <- DS_4b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_4c)[names(DS_4c)=="felev"]<- "felev"
+names(DS_4c)[names(DS_4c)=="Elev"]<- "Total Elevations"
+names(DS_4c)[names(DS_4c)=="Acqui"]<- "Total Acquisitions"
+names(DS_4c)[names(DS_4c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_4c)[names(DS_4c)=="fWhite"]<- "Fraction White"
+names(DS_4c)[names(DS_4c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_4c)[names(DS_4c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_4c)[names(DS_4c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_4c)[names(DS_4c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_4c)[names(DS_4c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_4c)[names(DS_4c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_4c)[names(DS_4c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_4c,
+            caption="Descriptive Statistics")
+
+```
+
+#### Descriptive Statistics: DNZs with only elevations and no acquisitions (f_elev >= 0.99) (n=650 DNZs)
+```{r include=FALSE}
+
+DS_5 <- subset(DS_all, felev >= 0.99)
+
+DS_5b  <- stat.desc(DS_5 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_5c <- DS_5b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_5c)[names(DS_5c)=="felev"]<- "felev"
+names(DS_5c)[names(DS_5c)=="Elev"]<- "Total Elevations"
+names(DS_5c)[names(DS_5c)=="Acqui"]<- "Total Acquisitions"
+names(DS_5c)[names(DS_5c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_5c)[names(DS_5c)=="fWhite"]<- "Fraction White"
+names(DS_5c)[names(DS_5c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_5c)[names(DS_5c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_5c)[names(DS_5c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_5c)[names(DS_5c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_5c)[names(DS_5c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_5c)[names(DS_5c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_5c)[names(DS_5c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_5c,
+            caption="Descriptive Statistics")
+
+```
+
+
+#### Descriptive Statistics: DNZs with at least 1 elevation (Elev > 0) (n=867 DNZs)
+```{r include=FALSE}
+
+DS_6 <- subset(DS_all, Elev > 0) #867
+
+DS_6b  <- stat.desc(DS_6 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_6c <- DS_6b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_6c)[names(DS_6c)=="felev"]<- "felev"
+names(DS_6c)[names(DS_6c)=="Elev"]<- "Total Elevations"
+names(DS_6c)[names(DS_6c)=="Acqui"]<- "Total Acquisitions"
+names(DS_6c)[names(DS_6c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_6c)[names(DS_6c)=="fWhite"]<- "Fraction White"
+names(DS_6c)[names(DS_6c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_6c)[names(DS_6c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_6c)[names(DS_6c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_6c)[names(DS_6c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_6c)[names(DS_6c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_6c)[names(DS_6c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_6c)[names(DS_6c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_6c,
+            caption="Descriptive Statistics")
+
+```
+
+#### Descriptive Statistics: DNZs with at least 1 Acquisition (Acqui > 0) (n=867 DNZs)
+```{r include=FALSE}
+
+DS_7 <- subset(DS_all, Acqui > 0) #3684
+
+DS_7b  <- stat.desc(DS_7 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_7c <- DS_7b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_7c)[names(DS_7c)=="felev"]<- "felev"
+names(DS_7c)[names(DS_7c)=="Elev"]<- "Total Elevations"
+names(DS_7c)[names(DS_7c)=="Acqui"]<- "Total Acquisitions"
+names(DS_7c)[names(DS_7c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_7c)[names(DS_7c)=="fWhite"]<- "Fraction White"
+names(DS_7c)[names(DS_7c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_7c)[names(DS_7c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_7c)[names(DS_7c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_7c)[names(DS_7c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_7c)[names(DS_7c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_7c)[names(DS_7c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_7c)[names(DS_7c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_7c,
+            caption="Descriptive Statistics")
+
+```
+
+
+#### Descriptive Statistics: DNZs with a 'mix' of elevations and acquisitions (0.99 > f_elev > 0.01) (n=217 DNZs) 
+```{r include=FALSE}
+
+DS_8 <- subset(DS_all, felev > 0.01 & 
+                        felev < 0.99)
+
+DS_8b  <- stat.desc(DS_8 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_8c <- DS_8b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_8c)[names(DS_8c)=="felev"]<- "felev"
+names(DS_8c)[names(DS_8c)=="Elev"]<- "Total Elevations"
+names(DS_8c)[names(DS_8c)=="Acqui"]<- "Total Acquisitions"
+names(DS_8c)[names(DS_8c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_8c)[names(DS_8c)=="fWhite"]<- "Fraction White"
+names(DS_8c)[names(DS_8c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_8c)[names(DS_8c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_8c)[names(DS_8c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_8c)[names(DS_8c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_8c)[names(DS_8c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_8c)[names(DS_8c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_8c)[names(DS_8c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_8c,
+            caption="Descriptive Statistics")
+
+```
+
+#### Descriptive Statistics: 'Less Mix' Sample: All DNZs except those with a 'mix' of elevations and acquisitions (0.99 > f_elev > 0.01) (n=4117 DNZs) 
+```{r include=FALSE}
+
+DS_9 <- subset(DS_all, felev==0 | felev==1)
+
+DS_9b  <- stat.desc(DS_9 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_9c <- DS_9b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_9c)[names(DS_9c)=="felev"]<- "felev"
+names(DS_9c)[names(DS_9c)=="Elev"]<- "Total Elevations"
+names(DS_9c)[names(DS_9c)=="Acqui"]<- "Total Acquisitions"
+names(DS_9c)[names(DS_9c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_9c)[names(DS_9c)=="fWhite"]<- "Fraction White"
+names(DS_9c)[names(DS_9c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_9c)[names(DS_9c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_9c)[names(DS_9c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_9c)[names(DS_9c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_9c)[names(DS_9c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_9c)[names(DS_9c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_9c)[names(DS_9c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_9c,
+            caption="Descriptive Statistics")
+
+```
+
+#### Descriptive Statistics: 'After 1993' Sample (n=4076 DNZs) 
+```{r include=FALSE}
+
+DS_10 <- DNZ15_After1993[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+
+DS_10b  <- stat.desc(DS_10 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_10c <- DS_10b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_10c)[names(DS_10c)=="felev"]<- "felev"
+names(DS_10c)[names(DS_10c)=="Elev"]<- "Total Elevations"
+names(DS_10c)[names(DS_10c)=="Acqui"]<- "Total Acquisitions"
+names(DS_10c)[names(DS_10c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_10c)[names(DS_10c)=="fWhite"]<- "Fraction White"
+names(DS_10c)[names(DS_10c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_10c)[names(DS_10c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_10c)[names(DS_10c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_10c)[names(DS_10c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_10c)[names(DS_10c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_10c)[names(DS_10c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_10c)[names(DS_10c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_10c,
+            caption="Descriptive Statistics")
+
+```
+
+
+#### Descriptive Statistics: 'w/o Sandy' Sample (n=4221 DNZs) 
+```{r include=FALSE}
+
+DS_11 <- DNZ15_WOSandy[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+
+DS_11b  <- stat.desc(DS_11 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_11c <- DS_11b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_11c)[names(DS_11c)=="felev"]<- "felev"
+names(DS_11c)[names(DS_11c)=="Elev"]<- "Total Elevations"
+names(DS_11c)[names(DS_11c)=="Acqui"]<- "Total Acquisitions"
+names(DS_11c)[names(DS_11c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_11c)[names(DS_11c)=="fWhite"]<- "Fraction White"
+names(DS_11c)[names(DS_11c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_11c)[names(DS_11c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_11c)[names(DS_11c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_11c)[names(DS_11c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_11c)[names(DS_11c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_11c)[names(DS_11c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_11c)[names(DS_11c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_11c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+#### Descriptive Statistics: 'w/o Katrina' Sample (n=4215 DNZs) 
+```{r include=FALSE}
+
+DS_12 <- DNZ15_WOKatrina[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+
+DS_12b  <- stat.desc(DS_12 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_12c <- DS_12b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_12c)[names(DS_12c)=="felev"]<- "felev"
+names(DS_12c)[names(DS_12c)=="Elev"]<- "Total Elevations"
+names(DS_12c)[names(DS_12c)=="Acqui"]<- "Total Acquisitions"
+names(DS_12c)[names(DS_12c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_12c)[names(DS_12c)=="fWhite"]<- "Fraction White"
+names(DS_12c)[names(DS_12c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_12c)[names(DS_12c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_12c)[names(DS_12c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_12c)[names(DS_12c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_12c)[names(DS_12c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_12c)[names(DS_12c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_12c)[names(DS_12c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_12c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+#### Descriptive Statistics: Shoreline ZCTA Sample (n=843 DNZs) 
+```{r include=FALSE}
+
+DS_12 <- DNZ15_ZCTA_shore[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+
+DS_12b  <- stat.desc(DS_12 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_12c <- DS_12b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_12c)[names(DS_12c)=="felev"]<- "felev"
+names(DS_12c)[names(DS_12c)=="Elev"]<- "Total Elevations"
+names(DS_12c)[names(DS_12c)=="Acqui"]<- "Total Acquisitions"
+names(DS_12c)[names(DS_12c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_12c)[names(DS_12c)=="fWhite"]<- "Fraction White"
+names(DS_12c)[names(DS_12c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_12c)[names(DS_12c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_12c)[names(DS_12c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_12c)[names(DS_12c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_12c)[names(DS_12c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_12c)[names(DS_12c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_12c)[names(DS_12c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_12c,
+            caption="Descriptive Statistics")
+
+```
+
+
+#### Descriptive Statistics: 'Sandy' Sample (n=113 DNZs) 
+```{r include=FALSE}
+
+DS_12 <- DNZ15_Sandy[,c("felev",
+                   "Elev",
+                   "Acqui",
+                   "MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "TotPop_W_10k",
+                   "fOwnOcc")]
+
+
+DS_12b  <- stat.desc(DS_12 , basic=TRUE, 
+                     options(scipen=100, digits=2))
+
+DS_12c <- DS_12b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_12c)[names(DS_12c)=="felev"]<- "felev"
+names(DS_12c)[names(DS_12c)=="Elev"]<- "Total Elevations"
+names(DS_12c)[names(DS_12c)=="Acqui"]<- "Total Acquisitions"
+names(DS_12c)[names(DS_12c)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(DS_12c)[names(DS_12c)=="fWhite"]<- "Fraction White"
+names(DS_12c)[names(DS_12c)=="RepRate"]<- "County Republican Vote Rate"
+names(DS_12c)[names(DS_12c)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(DS_12c)[names(DS_12c)=="count_fema_sfha_W_1k"]<- "Count of HU in FEMA SFHA 1k (W)"
+names(DS_12c)[names(DS_12c)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(DS_12c)[names(DS_12c)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(DS_12c)[names(DS_12c)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(DS_12c)[names(DS_12c)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_12c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+## Welch's Two Sample t-test: 
+### Sample comparisons: DNZs with at least 1 Elevation versus DNZs with at least 1 Acquisition
+ Of the 4334 DNZs, 217 have a mix of elevations and acquisitions. As such, we create two new variables to identify DNZs with at least 1 elevation (n=867), and DNZs with at least one acquisition (n=3684). While these samples are not perfectly independent given that some have a mix, we conduct two-sample t.tests to estimate whether there is a significant difference in means on the independent variables of interest. For these tests, we (A) compare DNZs with at least 1 elevation to those that have no elevations (only acquisitions: n=3467), and (B) compare DNZs with at least 1 acquisition to those that have no acquisitions (only elevations: n=650)
+```{r include=FALSE}
+Elev <- subset(DNZ15, Elev>0)
+Acqui <- subset(DNZ15, Acqui >0)
+
+DNZ15$AtLeast1Elev <- 0
+DNZ15$AtLeast1Elev[DNZ15$Elev>0] <-1 
+table(DNZ15$AtLeast1Elev)
+
+DNZ15$AtLeast1Acqui <- 0
+DNZ15$AtLeast1Acqui[DNZ15$Acqui>0] <-1 
+table(DNZ15$AtLeast1Acqui) #n=3684 DNZs
+
+Mixed <- subset(DNZ15, felev >0 & felev <1) #n= 217
+sum(Mixed$Elev)
+sum(Mixed$Acqui)
+
+sum(DNZ15$Elev)
+```
+
+
+#### Median Home Value: Sample Comparison
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(MHVadj_W_100k~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(MHVadj_W_100k~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at leats 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+The results of the two-sample t-tests indicate that there is a significant difference between the two samples in the hypothesized direction. DNZs with at least 1 elevation have a significantly higher MHV than DNZs with only acquisitions (A). DNZs with at least 1 acquisition have a significantly lower MHV than DNZs with only elevations (B). 
+
+#### Fraction White
+
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(fWhite~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(fWhite~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+The results of the two-sample t-tests indicate that there is a significant difference between the two samples regarding fraction White, but not in the hypothesized direction. DNZs with at least 1 elevation have a significantly lower fraction White on average than DNZs with only acquisitions (A). DNZs with at least 1 acquisition have a significantly higher fraction White than DNZs with only elevations (B). 
+
+
+#### Politics: County Republican Vote Rate
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(RepRate~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(RepRate~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+```
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+
+The results of the two-sample t-tests indicate that there is no significant difference between the two samples regarding percent the County Republican Vote Rate.
+
+#### ZCTA_shore
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ElevByZCTA_shore <- table(DNZ15$AtLeast1Elev,DNZ15$ZCTA_shore)
+ElevByZCTA_shore <- ElevByZCTA_shore[2,]
+ElevByZCTA_shore <- as.data.frame(ElevByZCTA_shore)
+library(Hmisc)
+row.names(ElevByZCTA_shore) <- c("Not in ZCTA_shore", "In ZCTA_shore")
+colnames(ElevByZCTA_shore) <- c("DNZs with at least 1 Elev")
+
+
+AcquiByZCTA_shore <- table(DNZ15$AtLeast1Acqui,DNZ15$ZCTA_shore)
+AcquiByZCTA_shore <- AcquiByZCTA_shore[2,]
+AcquiByZCTA_shore <- as.data.frame(AcquiByZCTA_shore)
+library(Hmisc)
+row.names(AcquiByZCTA_shore) <- c("Not in ZCTA_shore", "In ZCTA_shore")
+colnames(AcquiByZCTA_shore) <- c("DNZs with at least 1 Acquisition")
+```
+
+```{r include=FALSE}
+knitr::kable(ElevByZCTA_shore)
+knitr::kable(AcquiByZCTA_shore)
+
+```
+
+The summary statistics indicate that, of the 867 DNZs with at least 1 elevation, the majority (525) of these DNZs are located in coastal zctas. In contrast, of the 3684 DNZs with at least 1 acquisition, the majority  (3291) are NOT located in coastal shoreline counties.
+
+This lends support to the hypothesis that elevations are a coastal mitigation strategy, relative to buyouts.
+
+
+
+#### Hurricane
+```{r include = FALSE}
+ElevByHurricane <- table(DNZ15$AtLeast1Elev,DNZ15$Hurricane)
+ElevByHurricane <- ElevByHurricane[2,]
+ElevByHurricane <- as.data.frame(ElevByHurricane)
+library(Hmisc)
+row.names(ElevByHurricane) <- c("Event is not a Hurricane", "Event is a Hurricane")
+colnames(ElevByHurricane) <- c("DNZs with at least 1 Elev")
+
+
+AcquiByHurricane <- table(DNZ15$AtLeast1Acqui,DNZ15$Hurricane)
+AcquiByHurricane <- AcquiByHurricane[2,]
+AcquiByHurricane <- as.data.frame(AcquiByHurricane)
+library(Hmisc)
+row.names(AcquiByHurricane) <- c("Event is not a Hurricane", "Event is a Hurricane")
+colnames(AcquiByHurricane) <- c("DNZs with at least 1 Acquisition")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(ElevByHurricane)
+knitr::kable(AcquiByHurricane)
+
+```
+
+The summary statistics indicate that, of the 867 DNZs with at least 1 elevation, the majority (508) of these DNZs are impacted by a hurricane. In contrast, majority of DNZs with at least 1 acquisition (2782) of these DNZs are NOT impacted by hurricanes.
+
+This suggests that hurricanes drive elevations relative to buyouts.
+
+
+#### Policy incentive: Count of HUs in FEMA SFHA
+
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(count_fema_sfha_W_1k~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(count_fema_sfha_W_1k~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+
+The results of the two-sample t-tests indicate that there is a significant difference between the two samples regarding the count of HUs in FEMA SFHA. DNZs with at least 1 elevation have a significantly higher count of HUs in FEMA SFHA on average than DNZs with only acquisitions (A). DNZs with at least 1 acquisition have a significantly lower count of HUs in FEMA SFHA than DNZs with only elevations (B). 
+
+
+#### Damages: IHP Damage Est. $10M (W)
+ 
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(IHP_fldDamAmountAdjDNZ_W_10M~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(IHP_fldDamAmountAdjDNZ_W_10M~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+
+The results of the two-sample t-tests indicate that there is a significant difference between the two samples regarding the IHP Damage Est. DNZs with at least 1 elevation have a significantly higher NFIP Damage Est. on average than DNZs with only acquisitions (A). DNZs with at least 1 acquisition have a significantly lower NFIP Damage Est. than DNZs with only elevations (B). 
+
+
+#### Total Population 10k (W)
+
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(TotPop_W_10k~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(TotPop_W_10k~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testB)
+```
+
+The results of the two-sample t-tests indicate that there is no significant difference between the two samples regarding the Total population. 
+
+#### Fraction of Owner Occ. HUs
+
+```{r include=FALSE}
+
+#library(broom)
+#Part A
+options(scipen=2)
+table(DNZ15$AtLeast1Elev)
+t_testA <- t.test(fOwnOcc~AtLeast1Elev, data=DNZ15)
+tidy_t_testA <- broom::tidy(t_testA)
+tidy_t_testA <- as.data.frame(tidy_t_testA)
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate1"] <- "Est.1"
+names(tidy_t_testA)[names(tidy_t_testA)=="estimate2"] <- "Est.2"
+tidy_t_testA
+
+#Part B
+t_testB <- t.test(fOwnOcc~AtLeast1Acqui, data=DNZ15)
+tidy_t_testB <- broom::tidy(t_testB)
+tidy_t_testB <- as.data.frame(tidy_t_testB)
+tidy_t_testB
+
+```
+
+**Results of two-sample t.test:**
+*(A): Comparing DNZs with  no elevations (only acquisitions) (estimate 1), to DNZs with at least 1 elevation (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+*(B): Comparing DNZs with no acquisition (only elevations) (estimate 1) to DNZs with at least 1 acquisition (estimate 2):*
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(tidy_t_testA)
+```
+
+The results of the two-sample t-tests indicate that there is a significant difference between the two samples regarding the Fraction of Owner Occ. HUs:  DNZs with at least 1 elevation have a significantly higher Fraction of Owner Occ. HUs on average than DNZs with only acquisitions (A). DNZs with at least 1 acquisition have a significantly lower Fraction of Owner Occ. HUs than DNZs with only elevations (B). 
+
+
+
+## Driving Events
+```{r include=FALSE}
+aggElevEvent <- aggregate(list(DNZ15$AtLeast1Elev, DNZ15$Elev), by = list(DNZ15$Event), FUN=sum)
+colnames(aggElevEvent) <- c("Event","DNZs With At Least 1 Elevation","Count of Elevations")
+
+
+aggAcquiEvent <- aggregate(list(DNZ15$AtLeast1Acqui, DNZ15$Acqui), by = list(DNZ15$Event), FUN=sum)
+colnames(aggAcquiEvent) <- c("Event","Count of Acquisitions")
+
+
+PropsByEvent <-  aggregate(list(DNZ15$TotalProps, DNZ15$Acqui, DNZ15$Elev), by = list(DNZ15$Event), FUN=sum)
+colnames(PropsByEvent) <- c("Event","TotalProps", "Acqui","Elev")
+
+##Writing out Table####
+path1 <- 'G:/My Drive/Academic/PhD & Dissertation/Dissertation/Ch1 - FEMA National Study/Graphics'
+write.csv(PropsByEvent, file.path(path1, "PropsByEvent.csv"), row.names=TRUE)
+
+#now creating table of unique named events. Not that later need to add in unnamed events
+names(DNZ15)
+Event <- DNZ15[,c("Event")]
+Event <- as.data.frame(Event)
+colnames(Event) <- c("Event")
+Event <- unique(Event)
+table(Event)
+Event2<-subset(Event, Event!="Coastal Storm" &
+               Event!="Flood (unnamed)" &
+               Event!="Severe Ice Storm (unnamed)" &
+               Event!="Severe Storm (unnamed)")
+
+DDbyEvent <- DNZ15[,c("Event","DD")]
+names(DDbyEvent)
+DDbyEvent <- unique(DDbyEvent)
+
+EventByYear <- left_join(Event2, DDbyEvent, by="Event", copy=FALSE)
+EventByYear$Event_Year <- str_c(EventByYear$Event,", ", EventByYear$DD)
+
+##Writing out Table
+path1 <- 'G:/My Drive/Academic/PhD & Dissertation/Dissertation/Ch1 - FEMA National Study/Graphics'
+write.csv(EventByYear, file.path(path1, "EventByYear.csv"), row.names=TRUE)
+
+```
+
+
+###### Event
+```{r include=FALSE}
+aggElevEvent <- aggregate(list(DNZ15$AtLeast1Elev, DNZ15$Elev), by = list(DNZ15$Event), FUN=sum)
+colnames(aggElevEvent) <- c("Event","DNZs With At Least 1 Elevation","Count of Elevations")
+
+
+aggAcquiEvent <- aggregate(list(DNZ15$AtLeast1Acqui, DNZ15$Acqui), by = list(DNZ15$Event), FUN=sum)
+colnames(aggAcquiEvent) <- c("Event","DNZs With At Least 1 Acquisitions","Count of Acquisitions")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+knitr::kable(aggElevEvent[order(aggElevEvent$`Count of Elevations`, decreasing = TRUE),])
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data= aggElevEvent %>% slice_max(`Count of Elevations`, n = 10), #This pipe allows you to slice the top 10 data without having to subset it
+       aes(fct_reorder(Event, `Count of Elevations`),  #this part orders the columns
+           `Count of Elevations`))+
+  geom_bar(stat="identity") +
+  geom_text(aes(label=`Count of Elevations`, vjust=-0.5))+
+  labs(y="Count of Elevations", x="",
+               title="Count of HMGP Elevations by Event (1989-2022): Top 10")+
+  scale_y_continuous(limits=c(0,13000), labels=scales::comma)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+knitr::kable(aggAcquiEvent[order(aggAcquiEvent$`Count of Acquisitions`, decreasing = TRUE),])
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(data= aggAcquiEvent %>% slice_max(`Count of Acquisitions`, n = 10), #This pipe allows you to slice the top 10 data without having to subset it
+       aes(fct_reorder(Event, `Count of Acquisitions`),  #this part orders the columns
+           `Count of Acquisitions`))+
+  geom_bar(stat="identity") +
+    geom_text(aes(label=`Count of Acquisitions`, vjust=-0.5))+
+  labs(y="Count of Acquisitions", x="",
+               title="Count of HMGP Acquisitions by Event (1989-2022): Top 10")+
+  scale_y_continuous(limits=c(0,13000), labels=scales::comma)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
+
+
+## Logistic regression of DV against continuous IVs + Decile Bar Charts
+Next we explore visualizations of logistic regressions of the DV against the IVs
+
+### Full Sample
+```{r include = FALSE}
+#using non-winsorized vars:
+DNZ15$count_fema_sfha_1k <- DNZ15$count_fema_sfha / 1000
+DNZ15$NFIP_ICCadj_YOLZ_1M <- DNZ15$NFIP_ICCadj_YOLZ / 1000000
+DNZ15$IHP_fldDamAmountAdjDNZ_10M <- DNZ15$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15$TotPop_10k <- DNZ15$TotPop / 10000
+
+#Creating deciles:
+names(DNZ15)
+DNZ15$MHVadj_100k_dec <- NA
+DNZ15$MHVadj_100k_dec <- ntile(DNZ15$MHVadj_100k, 10)  
+table(DNZ15$MHVadj_100k_dec)
+DNZ15$MHVadj_100k_dec <- as.factor(DNZ15$MHVadj_100k_dec)
+tapply(DNZ15$MHVadj_100k, DNZ15$MHVadj_100k_dec, summary)
+tapply(DNZ15$felev, DNZ15$MHVadj_100k_dec, summary)
+
+DNZ15$fWhite_dec <- NA
+DNZ15$fWhite_dec <- ntile(DNZ15$fWhite, 10)  
+table(DNZ15$fWhite_dec)
+DNZ15$fWhite_dec <- as.factor(DNZ15$fWhite_dec)
+
+DNZ15$RepRate_dec <- NA
+DNZ15$RepRate_dec <- ntile(DNZ15$RepRate, 10)  
+table(DNZ15$RepRate_dec)
+DNZ15$RepRate_dec <- as.factor(DNZ15$RepRate_dec)
+
+DNZ15$ZCTA_shore_dec <- NA
+DNZ15$ZCTA_shore_dec <- ntile(DNZ15$ZCTA_shore, 10)  
+table(DNZ15$ZCTA_shore_dec)
+DNZ15$ZCTA_shore_dec <- as.factor(DNZ15$ZCTA_shore_dec)
+
+DNZ15$count_fema_sfha_1k_dec <- NA
+DNZ15$count_fema_sfha_1k_dec <- ntile(DNZ15$count_fema_sfha_1k , 10)  
+table(DNZ15$count_fema_sfha_1k_dec)
+DNZ15$count_fema_sfha_1k_dec <- as.factor(DNZ15$count_fema_sfha_1k_dec)
+
+DNZ15$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15$Hurricane_dec <- NA
+DNZ15$Hurricane_dec <- ntile(DNZ15$Hurricane, 10)  
+table(DNZ15$Hurricane_dec)
+DNZ15$Hurricane_dec <- as.factor(DNZ15$Hurricane_dec)
+
+DNZ15$TotPop_10k_dec <- NA
+DNZ15$TotPop_10k_dec <- ntile(DNZ15$TotPop_10k, 10)  
+table(DNZ15$TotPop_10k_dec)
+DNZ15$TotPop_10k_dec <- as.factor(DNZ15$TotPop_10k_dec)
+
+DNZ15$fOwnOcc_dec <- NA
+DNZ15$fOwnOcc_dec <- ntile(DNZ15$fOwnOcc, 10)  
+table(DNZ15$fOwnOcc_dec)
+DNZ15$fOwnOcc_dec <- as.factor(DNZ15$fOwnOcc_dec)
+
+
+```
+
+#### Boxplots
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=12))+
+  scale_y_continuous(breaks=c(1,0),
+                     labels=c("1: All Elevations","0: All Buyouts"))+
+  scale_x_discrete(breaks=c(1,2,3,4,5,6,7,8,9,10),
+                     labels=c("1 \n(0-0.7)",
+                              "2 \n(0.7-0.9)",
+                              "3 \n(0.9-1.0)",
+                              "4 \n(1.0-1.2)",
+                              "5 \n(1.2-1.3)",
+                              "6 \n(1.3-1.5)",
+                              "7 \n(1.5-1.7)",
+                              "8 \n(1.7-2.0)",
+                              "9 \n(2.0-2.7)",
+                              "10 \n(2.7-16.0)"))+
+  xlab("Median Home Value (100k)")
+
+B2 <- ggplot(data=DNZ15, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction White")
+
+B3 <- ggplot(data=DNZ15, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("County Republican Vote Rate")
+
+B4 <-ggplot(data=DNZ15, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore")
+
+B5 <-ggplot(data=DNZ15, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Count of HUs in FEMA SFHA (1K)")
+
+B6 <-ggplot(data=DNZ15, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Est. $1M")
+
+B7 <-ggplot(data=DNZ15, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP Damage Est. $10M")
+
+B8 <-ggplot(data=DNZ15, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane")
+
+B9 <-ggplot(data=DNZ15, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Total Population 10k")
+
+B10 <-ggplot(data=DNZ15, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction of Owner Occ. HUs")
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(B1,B2,B3,B4,B5,B6,B7,B8,B9,B10, ncol=2)
+
+```
+
+
+
+#### logit plots
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+    ylab("felev")+
+  xlab("Median Home Value (100k)")+
+  theme(text = element_text(size=15))+
+  scale_y_continuous(breaks=c(1,0),
+                     labels=c("1: All Elevations","0: All Buyouts"))
+
+
+#fwhite
+L2 <- ggplot(DNZ15, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Shoreline ZCTA")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10, ncol=2)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,ncol=2)
+
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+#### Mean felev by deciles
+```{r include = FALSE}
+#Mean felev vs decile plots
+#library(ggpubr)
+
+#MHV
+M1 <- ggerrorplot(data=DNZ15, x = "MHVadj_100k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Median Home Value (100k)")+
+  scale_y_continuous(limits=c(0,1))
+
+#fWhite
+M2 <- ggerrorplot(data=DNZ15, x = "fWhite_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction White")+
+  scale_y_continuous(limits=c(0,1))
+
+#RepRate
+M3 <- ggerrorplot(data=DNZ15, x = "RepRate_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: County Republican Vote Rate")+
+  scale_y_continuous(limits=c(0,1))
+
+#ZCTA_shore
+M4 <- ggerrorplot(data=DNZ15, x = "ZCTA_shore", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Shoreline ZCTA")+
+  scale_y_continuous(limits=c(0,1))
+
+#Count HUs FEMA SFHA
+M5 <- ggerrorplot(data=DNZ15, x = "count_fema_sfha_1k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Count of HUs in FEMA SFHA (1K)")+
+  scale_y_continuous(limits=c(0,1))
+
+#NFIP_ICCadj_YOLZ_1M
+M6 <- ggerrorplot(data=DNZ15, x = "NFIP_ICCadj_YOLZ_1M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: NFIP ICC Est. $1M")+
+  scale_y_continuous(limits=c(0,1))
+
+#IHP Damages
+M7 <- ggerrorplot(data=DNZ15, x = "IHP_fldDamAmountAdjDNZ_10M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: IHP Damage Est. $10M")+
+  scale_y_continuous(limits=c(0,1))
+
+#Hurricane
+M8 <- ggerrorplot(data=DNZ15, x = "Hurricane", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Hurricane")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#Total Population
+M9 <- ggerrorplot(data=DNZ15, x = "TotPop_10k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Total Population (10k)")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#fOwnOcc
+M10 <- ggerrorplot(data=DNZ15, x = "fOwnOcc_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction of Owner Occ. HUs")+
+  scale_y_continuous(limits=c(0,1))
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10, ncol=2)
+
+```
+
+
+
+### "Less Mix" Sample
+```{r include = FALSE}
+#using non-winsorized vars:
+DNZ15_lessMix$count_fema_sfha_1k <- DNZ15_lessMix$count_fema_sfha / 1000
+DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M <- DNZ15_lessMix$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_lessMix$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_lessMix$TotPop_10k <- DNZ15_lessMix$TotPop / 10000
+
+#Creating deciles:
+DNZ15_lessMix$MHVadj_100k_dec <- NA
+DNZ15_lessMix$MHVadj_100k_dec <- ntile(DNZ15_lessMix$MHVadj_100k, 10)  
+table(DNZ15_lessMix$MHVadj_100k_dec)
+DNZ15_lessMix$MHVadj_100k_dec <- as.factor(DNZ15_lessMix$MHVadj_100k_dec)
+tapply(DNZ15_lessMix$MHVadj_100k, DNZ15_lessMix$MHVadj_100k_dec, summary)
+tapply(DNZ15_lessMix$felev, DNZ15_lessMix$MHVadj_100k_dec, summary)
+
+DNZ15_lessMix$fWhite_dec <- NA
+DNZ15_lessMix$fWhite_dec <- ntile(DNZ15_lessMix$fWhite, 10)  
+table(DNZ15_lessMix$fWhite_dec)
+DNZ15_lessMix$fWhite_dec <- as.factor(DNZ15_lessMix$fWhite_dec)
+
+DNZ15_lessMix$RepRate_dec <- NA
+DNZ15_lessMix$RepRate_dec <- ntile(DNZ15_lessMix$RepRate, 10)  
+table(DNZ15_lessMix$RepRate_dec)
+DNZ15_lessMix$RepRate_dec <- as.factor(DNZ15_lessMix$RepRate_dec)
+
+DNZ15_lessMix$ZCTA_shore_dec <- NA
+DNZ15_lessMix$ZCTA_shore_dec <- ntile(DNZ15_lessMix$ZCTA_shore, 10)  
+table(DNZ15_lessMix$ZCTA_shore_dec)
+DNZ15_lessMix$ZCTA_shore_dec <- as.factor(DNZ15_lessMix$ZCTA_shore_dec)
+
+DNZ15_lessMix$count_fema_sfha_1k_dec <- NA
+DNZ15_lessMix$count_fema_sfha_1k_dec <- ntile(DNZ15_lessMix$count_fema_sfha_1k , 10)  
+table(DNZ15_lessMix$count_fema_sfha_1k_dec)
+DNZ15_lessMix$count_fema_sfha_1k_dec <- as.factor(DNZ15_lessMix$count_fema_sfha_1k_dec)
+
+DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_lessMix$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_lessMix$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_lessMix$Hurricane_dec <- NA
+DNZ15_lessMix$Hurricane_dec <- ntile(DNZ15_lessMix$Hurricane, 10)  
+table(DNZ15_lessMix$Hurricane_dec)
+DNZ15_lessMix$Hurricane_dec <- as.factor(DNZ15_lessMix$Hurricane_dec)
+
+DNZ15_lessMix$TotPop_10k_dec <- NA
+DNZ15_lessMix$TotPop_10k_dec <- ntile(DNZ15_lessMix$TotPop_10k, 10)  
+table(DNZ15_lessMix$TotPop_10k_dec)
+DNZ15_lessMix$TotPop_10k_dec <- as.factor(DNZ15_lessMix$TotPop_10k_dec)
+
+DNZ15_lessMix$fOwnOcc_dec <- NA
+DNZ15_lessMix$fOwnOcc_dec <- ntile(DNZ15_lessMix$fOwnOcc, 10)  
+table(DNZ15_lessMix$fOwnOcc_dec)
+DNZ15_lessMix$fOwnOcc_dec <- as.factor(DNZ15_lessMix$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_lessMix, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Deciles")
+
+B2 <- ggplot(data=DNZ15_lessMix, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fWhite Deciles")
+
+B3 <- ggplot(data=DNZ15_lessMix, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("RepRate Deciles")
+
+B4 <-ggplot(data=DNZ15_lessMix, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore Deciles")
+
+B5 <-ggplot(data=DNZ15_lessMix, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Deciles")
+
+B6 <-ggplot(data=DNZ15_lessMix, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Deciles")
+
+B7 <-ggplot(data=DNZ15_lessMix, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP damage Deciles")
+
+B8 <-ggplot(data=DNZ15_lessMix, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Deciles")
+
+B9 <-ggplot(data=DNZ15_lessMix, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. Deciles")
+
+B10 <-ggplot(data=DNZ15_lessMix, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fOwnOcc Deciles")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_lessMix, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_lessMix, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_lessMix, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_lessMix, aes(x=ZCTA_shore, y=felev))+
+  geom_point()+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_lessMix, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_lessMix, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M (W)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_lessMix, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_lessMix, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_lessMix, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_lessMix, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+### After 1993 Sample
+```{r include = FALSE}
+DNZ15_After1993$count_fema_sfha_1k <- DNZ15_After1993$count_fema_sfha / 1000
+DNZ15_After1993$NFIP_ICCadj_YOLZ_1M <- DNZ15_After1993$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_After1993$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_After1993$TotPop_10k <- DNZ15_After1993$TotPop / 10000
+
+#Creating deciles:
+DNZ15_After1993$MHVadj_100k_dec <- NA
+DNZ15_After1993$MHVadj_100k_dec <- ntile(DNZ15_After1993$MHVadj_100k, 10)  
+table(DNZ15_After1993$MHVadj_100k_dec)
+DNZ15_After1993$MHVadj_100k_dec <- as.factor(DNZ15_After1993$MHVadj_100k_dec)
+tapply(DNZ15_After1993$MHVadj_100k, DNZ15_After1993$MHVadj_100k_dec, summary)
+tapply(DNZ15_After1993$felev, DNZ15_After1993$MHVadj_100k_dec, summary)
+
+DNZ15_After1993$fWhite_dec <- NA
+DNZ15_After1993$fWhite_dec <- ntile(DNZ15_After1993$fWhite, 10)  
+table(DNZ15_After1993$fWhite_dec)
+DNZ15_After1993$fWhite_dec <- as.factor(DNZ15_After1993$fWhite_dec)
+
+DNZ15_After1993$RepRate_dec <- NA
+DNZ15_After1993$RepRate_dec <- ntile(DNZ15_After1993$RepRate, 10)  
+table(DNZ15_After1993$RepRate_dec)
+DNZ15_After1993$RepRate_dec <- as.factor(DNZ15_After1993$RepRate_dec)
+
+DNZ15_After1993$ZCTA_shore_dec <- NA
+DNZ15_After1993$ZCTA_shore_dec <- ntile(DNZ15_After1993$ZCTA_shore, 10)  
+table(DNZ15_After1993$ZCTA_shore_dec)
+DNZ15_After1993$ZCTA_shore_dec <- as.factor(DNZ15_After1993$ZCTA_shore_dec)
+
+DNZ15_After1993$count_fema_sfha_1k_dec <- NA
+DNZ15_After1993$count_fema_sfha_1k_dec <- ntile(DNZ15_After1993$count_fema_sfha_1k , 10)  
+table(DNZ15_After1993$count_fema_sfha_1k_dec)
+DNZ15_After1993$count_fema_sfha_1k_dec <- as.factor(DNZ15_After1993$count_fema_sfha_1k_dec)
+
+DNZ15_After1993$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_After1993$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_After1993$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_After1993$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_After1993$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_After1993$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_After1993$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_After1993$Hurricane_dec <- NA
+DNZ15_After1993$Hurricane_dec <- ntile(DNZ15_After1993$Hurricane, 10)  
+table(DNZ15_After1993$Hurricane_dec)
+DNZ15_After1993$Hurricane_dec <- as.factor(DNZ15_After1993$Hurricane_dec)
+
+DNZ15_After1993$TotPop_10k_dec <- NA
+DNZ15_After1993$TotPop_10k_dec <- ntile(DNZ15_After1993$TotPop_10k, 10)  
+table(DNZ15_After1993$TotPop_10k_dec)
+DNZ15_After1993$TotPop_10k_dec <- as.factor(DNZ15_After1993$TotPop_10k_dec)
+
+DNZ15_After1993$fOwnOcc_dec <- NA
+DNZ15_After1993$fOwnOcc_dec <- ntile(DNZ15_After1993$fOwnOcc, 10)  
+table(DNZ15_After1993$fOwnOcc_dec)
+DNZ15_After1993$fOwnOcc_dec <- as.factor(DNZ15_After1993$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_After1993, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Deciles")
+
+B2 <- ggplot(data=DNZ15_After1993, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fWhite Deciles")
+
+B3 <- ggplot(data=DNZ15_After1993, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("RepRate Deciles")
+
+B4 <-ggplot(data=DNZ15_After1993, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore Deciles")
+
+B5 <-ggplot(data=DNZ15_After1993, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Deciles")
+
+B6 <-ggplot(data=DNZ15_After1993, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Deciles")
+
+B7 <-ggplot(data=DNZ15_After1993, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP damage Deciles")
+
+B8 <-ggplot(data=DNZ15_After1993, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Deciles")
+
+B9 <-ggplot(data=DNZ15_After1993, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. Deciles")
+
+B10 <-ggplot(data=DNZ15_After1993, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fOwnOcc Deciles")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_After1993, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_After1993, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_After1993, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_After1993, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_After1993, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_After1993, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M (W)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_After1993, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_After1993, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_After1993, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_After1993, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+
+### Without Sandy Sample
+```{r include = FALSE}
+DNZ15_WOSandy$count_fema_sfha_1k <- DNZ15_WOSandy$count_fema_sfha / 1000
+DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M <- DNZ15_WOSandy$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_WOSandy$TotPop_10k <- DNZ15_WOSandy$TotPop / 10000
+
+#Creating deciles:
+DNZ15_WOSandy$MHVadj_100k_dec <- NA
+DNZ15_WOSandy$MHVadj_100k_dec <- ntile(DNZ15_WOSandy$MHVadj_100k, 10)  
+table(DNZ15_WOSandy$MHVadj_100k_dec)
+DNZ15_WOSandy$MHVadj_100k_dec <- as.factor(DNZ15_WOSandy$MHVadj_100k_dec)
+tapply(DNZ15_WOSandy$MHVadj_100k, DNZ15_WOSandy$MHVadj_100k_dec, summary)
+tapply(DNZ15_WOSandy$felev, DNZ15_WOSandy$MHVadj_100k_dec, summary)
+
+DNZ15_WOSandy$fWhite_dec <- NA
+DNZ15_WOSandy$fWhite_dec <- ntile(DNZ15_WOSandy$fWhite, 10)  
+table(DNZ15_WOSandy$fWhite_dec)
+DNZ15_WOSandy$fWhite_dec <- as.factor(DNZ15_WOSandy$fWhite_dec)
+
+DNZ15_WOSandy$RepRate_dec <- NA
+DNZ15_WOSandy$RepRate_dec <- ntile(DNZ15_WOSandy$RepRate, 10)  
+table(DNZ15_WOSandy$RepRate_dec)
+DNZ15_WOSandy$RepRate_dec <- as.factor(DNZ15_WOSandy$RepRate_dec)
+
+DNZ15_WOSandy$ZCTA_shore_dec <- NA
+DNZ15_WOSandy$ZCTA_shore_dec <- ntile(DNZ15_WOSandy$ZCTA_shore, 10)  
+table(DNZ15_WOSandy$ZCTA_shore_dec)
+DNZ15_WOSandy$ZCTA_shore_dec <- as.factor(DNZ15_WOSandy$ZCTA_shore_dec)
+
+DNZ15_WOSandy$count_fema_sfha_1k_dec <- NA
+DNZ15_WOSandy$count_fema_sfha_1k_dec <- ntile(DNZ15_WOSandy$count_fema_sfha_1k , 10)  
+table(DNZ15_WOSandy$count_fema_sfha_1k_dec)
+DNZ15_WOSandy$count_fema_sfha_1k_dec <- as.factor(DNZ15_WOSandy$count_fema_sfha_1k_dec)
+
+DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_WOSandy$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_WOSandy$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_WOSandy$Hurricane_dec <- NA
+DNZ15_WOSandy$Hurricane_dec <- ntile(DNZ15_WOSandy$Hurricane, 10)  
+table(DNZ15_WOSandy$Hurricane_dec)
+DNZ15_WOSandy$Hurricane_dec <- as.factor(DNZ15_WOSandy$Hurricane_dec)
+
+DNZ15_WOSandy$TotPop_10k_dec <- NA
+DNZ15_WOSandy$TotPop_10k_dec <- ntile(DNZ15_WOSandy$TotPop_10k, 10)  
+table(DNZ15_WOSandy$TotPop_10k_dec)
+DNZ15_WOSandy$TotPop_10k_dec <- as.factor(DNZ15_WOSandy$TotPop_10k_dec)
+
+DNZ15_WOSandy$fOwnOcc_dec <- NA
+DNZ15_WOSandy$fOwnOcc_dec <- ntile(DNZ15_WOSandy$fOwnOcc, 10)  
+table(DNZ15_WOSandy$fOwnOcc_dec)
+DNZ15_WOSandy$fOwnOcc_dec <- as.factor(DNZ15_WOSandy$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_WOSandy, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Deciles")
+
+B2 <- ggplot(data=DNZ15_WOSandy, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fWhite Deciles")
+
+B3 <- ggplot(data=DNZ15_WOSandy, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("RepRate Deciles")
+
+B4 <-ggplot(data=DNZ15_WOSandy, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore Deciles")
+
+B5 <-ggplot(data=DNZ15_WOSandy, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Deciles")
+
+B6 <-ggplot(data=DNZ15_WOSandy, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Deciles")
+
+B7 <-ggplot(data=DNZ15_WOSandy, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP damage Deciles")
+
+B8 <-ggplot(data=DNZ15_WOSandy, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Deciles")
+
+B9 <-ggplot(data=DNZ15_WOSandy, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. Deciles")
+
+B10 <-ggplot(data=DNZ15_WOSandy, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fOwnOcc Deciles")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_WOSandy, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_WOSandy, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_WOSandy, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_WOSandy, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_WOSandy, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_WOSandy, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_WOSandy, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_WOSandy, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_WOSandy, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_WOSandy, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+
+### Without Katrina Sample
+```{r include = FALSE}
+DNZ15_WOKatrina$count_fema_sfha_1k <- DNZ15_WOKatrina$count_fema_sfha / 1000
+DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M <- DNZ15_WOKatrina$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_WOKatrina$TotPop_10k <- DNZ15_WOKatrina$TotPop / 10000
+
+#Creating deciles:
+DNZ15_WOKatrina$MHVadj_100k_dec <- NA
+DNZ15_WOKatrina$MHVadj_100k_dec <- ntile(DNZ15_WOKatrina$MHVadj_100k, 10)  
+table(DNZ15_WOKatrina$MHVadj_100k_dec)
+DNZ15_WOKatrina$MHVadj_100k_dec <- as.factor(DNZ15_WOKatrina$MHVadj_100k_dec)
+tapply(DNZ15_WOKatrina$MHVadj_100k, DNZ15_WOKatrina$MHVadj_100k_dec, summary)
+tapply(DNZ15_WOKatrina$felev, DNZ15_WOKatrina$MHVadj_100k_dec, summary)
+
+DNZ15_WOKatrina$fWhite_dec <- NA
+DNZ15_WOKatrina$fWhite_dec <- ntile(DNZ15_WOKatrina$fWhite, 10)  
+table(DNZ15_WOKatrina$fWhite_dec)
+DNZ15_WOKatrina$fWhite_dec <- as.factor(DNZ15_WOKatrina$fWhite_dec)
+
+DNZ15_WOKatrina$RepRate_dec <- NA
+DNZ15_WOKatrina$RepRate_dec <- ntile(DNZ15_WOKatrina$RepRate, 10)  
+table(DNZ15_WOKatrina$RepRate_dec)
+DNZ15_WOKatrina$RepRate_dec <- as.factor(DNZ15_WOKatrina$RepRate_dec)
+
+DNZ15_WOKatrina$ZCTA_shore_dec <- NA
+DNZ15_WOKatrina$ZCTA_shore_dec <- ntile(DNZ15_WOKatrina$ZCTA_shore, 10)  
+table(DNZ15_WOKatrina$ZCTA_shore_dec)
+DNZ15_WOKatrina$ZCTA_shore_dec <- as.factor(DNZ15_WOKatrina$ZCTA_shore_dec)
+
+DNZ15_WOKatrina$count_fema_sfha_1k_dec <- NA
+DNZ15_WOKatrina$count_fema_sfha_1k_dec <- ntile(DNZ15_WOKatrina$count_fema_sfha_1k , 10)  
+table(DNZ15_WOKatrina$count_fema_sfha_1k_dec)
+DNZ15_WOKatrina$count_fema_sfha_1k_dec <- as.factor(DNZ15_WOKatrina$count_fema_sfha_1k_dec)
+
+DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_WOKatrina$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_WOKatrina$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_WOKatrina$Hurricane_dec <- NA
+DNZ15_WOKatrina$Hurricane_dec <- ntile(DNZ15_WOKatrina$Hurricane, 10)  
+table(DNZ15_WOKatrina$Hurricane_dec)
+DNZ15_WOKatrina$Hurricane_dec <- as.factor(DNZ15_WOKatrina$Hurricane_dec)
+
+DNZ15_WOKatrina$TotPop_10k_dec <- NA
+DNZ15_WOKatrina$TotPop_10k_dec <- ntile(DNZ15_WOKatrina$TotPop_10k, 10)  
+table(DNZ15_WOKatrina$TotPop_10k_dec)
+DNZ15_WOKatrina$TotPop_10k_dec <- as.factor(DNZ15_WOKatrina$TotPop_10k_dec)
+
+DNZ15_WOKatrina$fOwnOcc_dec <- NA
+DNZ15_WOKatrina$fOwnOcc_dec <- ntile(DNZ15_WOKatrina$fOwnOcc, 10)  
+table(DNZ15_WOKatrina$fOwnOcc_dec)
+DNZ15_WOKatrina$fOwnOcc_dec <- as.factor(DNZ15_WOKatrina$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_WOKatrina, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Deciles")
+
+B2 <- ggplot(data=DNZ15_WOKatrina, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fWhite Deciles")
+
+B3 <- ggplot(data=DNZ15_WOKatrina, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("RepRate Deciles")
+
+B4 <-ggplot(data=DNZ15_WOKatrina, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore Deciles")
+
+B5 <-ggplot(data=DNZ15_WOKatrina, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Deciles")
+
+B6 <-ggplot(data=DNZ15_WOKatrina, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Deciles")
+
+B7 <-ggplot(data=DNZ15_WOKatrina, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP damage Deciles")
+
+B8 <-ggplot(data=DNZ15_WOKatrina, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Deciles")
+
+B9 <-ggplot(data=DNZ15_WOKatrina, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. Deciles")
+
+B10 <-ggplot(data=DNZ15_WOKatrina, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fOwnOcc Deciles")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_WOKatrina, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_WOKatrina, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_WOKatrina, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_WOKatrina, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_WOKatrina, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_WOKatrina, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_WOKatrina, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_WOKatrina, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_WOKatrina, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_WOKatrina, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+
+
+### ZCTA_shore Sample
+```{r include = FALSE}
+DNZ15_ZCTA_shore$count_fema_sfha_1k <- DNZ15_ZCTA_shore$count_fema_sfha / 1000
+DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M <- DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_ZCTA_shore$TotPop_10k <- DNZ15_ZCTA_shore$TotPop / 10000
+
+#Creating deciles:
+DNZ15_ZCTA_shore$MHVadj_100k_dec <- NA
+DNZ15_ZCTA_shore$MHVadj_100k_dec <- ntile(DNZ15_ZCTA_shore$MHVadj_100k, 10)  
+table(DNZ15_ZCTA_shore$MHVadj_100k_dec)
+DNZ15_ZCTA_shore$MHVadj_100k_dec <- as.factor(DNZ15_ZCTA_shore$MHVadj_100k_dec)
+tapply(DNZ15_ZCTA_shore$MHVadj_100k, DNZ15_ZCTA_shore$MHVadj_100k_dec, summary)
+tapply(DNZ15_ZCTA_shore$felev, DNZ15_ZCTA_shore$MHVadj_100k_dec, summary)
+
+DNZ15_ZCTA_shore$fWhite_dec <- NA
+DNZ15_ZCTA_shore$fWhite_dec <- ntile(DNZ15_ZCTA_shore$fWhite, 10)  
+table(DNZ15_ZCTA_shore$fWhite_dec)
+DNZ15_ZCTA_shore$fWhite_dec <- as.factor(DNZ15_ZCTA_shore$fWhite_dec)
+
+DNZ15_ZCTA_shore$RepRate_dec <- NA
+DNZ15_ZCTA_shore$RepRate_dec <- ntile(DNZ15_ZCTA_shore$RepRate, 10)  
+table(DNZ15_ZCTA_shore$RepRate_dec)
+DNZ15_ZCTA_shore$RepRate_dec <- as.factor(DNZ15_ZCTA_shore$RepRate_dec)
+
+DNZ15_ZCTA_shore$ZCTA_shore_dec <- NA
+DNZ15_ZCTA_shore$ZCTA_shore_dec <- ntile(DNZ15_ZCTA_shore$ZCTA_shore, 10)  
+table(DNZ15_ZCTA_shore$ZCTA_shore_dec)
+DNZ15_ZCTA_shore$ZCTA_shore_dec <- as.factor(DNZ15_ZCTA_shore$ZCTA_shore_dec)
+
+DNZ15_ZCTA_shore$count_fema_sfha_1k_dec <- NA
+DNZ15_ZCTA_shore$count_fema_sfha_1k_dec <- ntile(DNZ15_ZCTA_shore$count_fema_sfha_1k , 10)  
+table(DNZ15_ZCTA_shore$count_fema_sfha_1k_dec)
+DNZ15_ZCTA_shore$count_fema_sfha_1k_dec <- as.factor(DNZ15_ZCTA_shore$count_fema_sfha_1k_dec)
+
+DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_ZCTA_shore$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_ZCTA_shore$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_ZCTA_shore$Hurricane_dec <- NA
+DNZ15_ZCTA_shore$Hurricane_dec <- ntile(DNZ15_ZCTA_shore$Hurricane, 10)  
+table(DNZ15_ZCTA_shore$Hurricane_dec)
+DNZ15_ZCTA_shore$Hurricane_dec <- as.factor(DNZ15_ZCTA_shore$Hurricane_dec)
+
+DNZ15_ZCTA_shore$TotPop_10k_dec <- NA
+DNZ15_ZCTA_shore$TotPop_10k_dec <- ntile(DNZ15_ZCTA_shore$TotPop_10k, 10)  
+table(DNZ15_ZCTA_shore$TotPop_10k_dec)
+DNZ15_ZCTA_shore$TotPop_10k_dec <- as.factor(DNZ15_ZCTA_shore$TotPop_10k_dec)
+
+DNZ15_ZCTA_shore$fOwnOcc_dec <- NA
+DNZ15_ZCTA_shore$fOwnOcc_dec <- ntile(DNZ15_ZCTA_shore$fOwnOcc, 10)  
+table(DNZ15_ZCTA_shore$fOwnOcc_dec)
+DNZ15_ZCTA_shore$fOwnOcc_dec <- as.factor(DNZ15_ZCTA_shore$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_ZCTA_shore, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV 100k")
+
+B2 <- ggplot(data=DNZ15_ZCTA_shore, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction White")
+
+B3 <- ggplot(data=DNZ15_ZCTA_shore, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("County Republican Vote Rate")
+
+B4 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore")
+
+B5 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Count of HUs in FEMA SFHA (1K)")
+
+B6 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Est. $1M")
+
+B7 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP Damage Est. $10M")
+
+B8 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane")
+
+B9 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Total Population 10k")
+
+B10 <-ggplot(data=DNZ15_ZCTA_shore, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction of Owner Occ. HUs")
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(B1,B2,B3,B4,B5,B6,B7,B8,B9,B10, ncol=2)
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_ZCTA_shore, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_ZCTA_shore, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_ZCTA_shore, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_ZCTA_shore, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_ZCTA_shore, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_ZCTA_shore, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_ZCTA_shore, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_ZCTA_shore, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_ZCTA_shore, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_ZCTA_shore, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10, ncol=2)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L5, B5, ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L8,B8,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+#### Mean felev by deciles
+```{r include = FALSE}
+#Mean felev vs decile plots
+#library(ggpubr)
+
+#MHV
+M1 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "MHVadj_100k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Median Home Value (100k)")+
+  scale_y_continuous(limits=c(0,1))
+
+#fWhite
+M2 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "fWhite_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction White")+
+  scale_y_continuous(limits=c(0,1))
+
+#RepRate
+M3 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "RepRate_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: County Republican Vote Rate")+
+  scale_y_continuous(limits=c(0,1))
+
+#ZCTA_shore
+
+
+#Count HUs FEMA SFHA
+M5 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "count_fema_sfha_1k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Count of HUs in FEMA SFHA (1K)")+
+  scale_y_continuous(limits=c(0,1))
+
+#NFIP_ICCadj_YOLZ_1M
+M6 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "NFIP_ICCadj_YOLZ_1M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: NFIP ICC Est. $1M")+
+  scale_y_continuous(limits=c(0,1))
+
+#IHP Damages
+M7 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "IHP_fldDamAmountAdjDNZ_10M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: IHP Damage Est. $10M")+
+  scale_y_continuous(limits=c(0,1))
+
+#Hurricane
+M8 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "Hurricane", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Hurricane")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#Total Population
+M9 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "TotPop_10k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Total Population (10k)")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#fOwnOcc
+M10 <- ggerrorplot(data=DNZ15_ZCTA_shore, x = "fOwnOcc_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction of Owner Occ. HUs")+
+  scale_y_continuous(limits=c(0,1))
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(M1,M2,M3,M5,M6,M7,M8,M9,M10, ncol=2)
+
+```
+
+
+### Sandy Sample
+```{r include = FALSE}
+DNZ15_Sandy$count_fema_sfha_1k <- DNZ15_Sandy$count_fema_sfha / 1000
+DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M <- DNZ15_Sandy$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_Sandy$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_Sandy$TotPop_10k <- DNZ15_Sandy$TotPop / 10000
+
+#Creating deciles:
+DNZ15_Sandy$MHVadj_100k_dec <- NA
+DNZ15_Sandy$MHVadj_100k_dec <- ntile(DNZ15_Sandy$MHVadj_100k, 10)  
+table(DNZ15_Sandy$MHVadj_100k_dec)
+DNZ15_Sandy$MHVadj_100k_dec <- as.factor(DNZ15_Sandy$MHVadj_100k_dec)
+tapply(DNZ15_Sandy$MHVadj_100k, DNZ15_Sandy$MHVadj_100k_dec, summary)
+tapply(DNZ15_Sandy$felev, DNZ15_Sandy$MHVadj_100k_dec, summary)
+
+DNZ15_Sandy$fWhite_dec <- NA
+DNZ15_Sandy$fWhite_dec <- ntile(DNZ15_Sandy$fWhite, 10)  
+table(DNZ15_Sandy$fWhite_dec)
+DNZ15_Sandy$fWhite_dec <- as.factor(DNZ15_Sandy$fWhite_dec)
+
+DNZ15_Sandy$RepRate_dec <- NA
+DNZ15_Sandy$RepRate_dec <- ntile(DNZ15_Sandy$RepRate, 10)  
+table(DNZ15_Sandy$RepRate_dec)
+DNZ15_Sandy$RepRate_dec <- as.factor(DNZ15_Sandy$RepRate_dec)
+
+DNZ15_Sandy$ZCTA_shore_dec <- NA
+DNZ15_Sandy$ZCTA_shore_dec <- ntile(DNZ15_Sandy$ZCTA_shore, 10)  
+table(DNZ15_Sandy$ZCTA_shore_dec)
+DNZ15_Sandy$ZCTA_shore_dec <- as.factor(DNZ15_Sandy$ZCTA_shore_dec)
+
+DNZ15_Sandy$count_fema_sfha_1k_dec <- NA
+DNZ15_Sandy$count_fema_sfha_1k_dec <- ntile(DNZ15_Sandy$count_fema_sfha_1k , 10)  
+table(DNZ15_Sandy$count_fema_sfha_1k_dec)
+DNZ15_Sandy$count_fema_sfha_1k_dec <- as.factor(DNZ15_Sandy$count_fema_sfha_1k_dec)
+
+DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_Sandy$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_Sandy$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_Sandy$Hurricane_dec <- NA
+DNZ15_Sandy$Hurricane_dec <- ntile(DNZ15_Sandy$Hurricane, 10)  
+table(DNZ15_Sandy$Hurricane_dec)
+DNZ15_Sandy$Hurricane_dec <- as.factor(DNZ15_Sandy$Hurricane_dec)
+
+DNZ15_Sandy$TotPop_10k_dec <- NA
+DNZ15_Sandy$TotPop_10k_dec <- ntile(DNZ15_Sandy$TotPop_10k, 10)  
+table(DNZ15_Sandy$TotPop_10k_dec)
+DNZ15_Sandy$TotPop_10k_dec <- as.factor(DNZ15_Sandy$TotPop_10k_dec)
+
+DNZ15_Sandy$fOwnOcc_dec <- NA
+DNZ15_Sandy$fOwnOcc_dec <- ntile(DNZ15_Sandy$fOwnOcc, 10)  
+table(DNZ15_Sandy$fOwnOcc_dec)
+DNZ15_Sandy$fOwnOcc_dec <- as.factor(DNZ15_Sandy$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_Sandy, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Dec.")
+
+B2 <- ggplot(data=DNZ15_Sandy, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction White Dec.")
+
+B3 <- ggplot(data=DNZ15_Sandy, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Cnty Rep. Vote Rate Dec.")
+
+B4 <-ggplot(data=DNZ15_Sandy, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Coastal Shoreline County Dec.")
+
+B5 <-ggplot(data=DNZ15_Sandy, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Dec.")
+
+B6 <-ggplot(data=DNZ15_Sandy, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Dec.")
+
+B7 <-ggplot(data=DNZ15_Sandy, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP Damage Est. $10M Dec.")
+
+B8 <-ggplot(data=DNZ15_Sandy, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Dec.")
+
+B9 <-ggplot(data=DNZ15_Sandy, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. 10k Dec.")
+
+B10 <-ggplot(data=DNZ15_Sandy, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Fraction HUs Own. Occ Dec.")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_Sandy, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_Sandy, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_Sandy, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_Sandy, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Shoreline ZCTA")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_Sandy, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_Sandy, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_Sandy, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_Sandy, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_Sandy, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_Sandy, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(L1, L2, L3,L4,L5,L6,L7,L9,L10,ncol=5)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+
+#### Mean felev by deciles
+```{r include = FALSE}
+#Mean felev vs decile plots
+#library(ggpubr)
+
+#MHV
+M1 <- ggerrorplot(data=DNZ15_Sandy, x = "MHVadj_100k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Median Home Value (100k)")+
+  scale_y_continuous(limits=c(0,1))
+
+#fWhite
+M2 <- ggerrorplot(data=DNZ15_Sandy, x = "fWhite_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction White")+
+  scale_y_continuous(limits=c(0,1))
+
+#RepRate
+M3 <- ggerrorplot(data=DNZ15_Sandy, x = "RepRate_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: County Republican Vote Rate")+
+  scale_y_continuous(limits=c(0,1))
+
+#ZCTA_shore
+M4 <- ggerrorplot(data=DNZ15_Sandy, x = "ZCTA_shore", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Shoreline ZCTA")+
+  scale_y_continuous(limits=c(0,1))
+
+#Count HUs FEMA SFHA
+M5 <- ggerrorplot(data=DNZ15_Sandy, x = "count_fema_sfha_1k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Count of HUs in FEMA SFHA (1K)")+
+  scale_y_continuous(limits=c(0,1))
+
+#NFIP_ICCadj_YOLZ_1M
+M6 <- ggerrorplot(data=DNZ15_Sandy, x = "NFIP_ICCadj_YOLZ_1M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: NFIP ICC Est. $1M")+
+  scale_y_continuous(limits=c(0,1))
+
+#IHP Damages
+M7 <- ggerrorplot(data=DNZ15_Sandy, x = "IHP_fldDamAmountAdjDNZ_10M_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: IHP Damage Est. $10M")+
+  scale_y_continuous(limits=c(0,1))
+
+#Hurricane
+M8 <- ggerrorplot(data=DNZ15_Sandy, x = "Hurricane", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Hurricane")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#Total Population
+M9 <- ggerrorplot(data=DNZ15_Sandy, x = "TotPop_10k_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Total Population (10k)")+
+  scale_y_continuous(limits=c(0,1))
+
+
+#fOwnOcc
+M10 <- ggerrorplot(data=DNZ15_Sandy, x = "fOwnOcc_dec", y = "felev", 
+            desc_stat = "mean_se",
+            error.plot="errorbar",
+            add="mean")+
+  ylab("Mean felev")+
+  xlab("Deciles: Fraction of Owner Occ. HUs")+
+  scale_y_continuous(limits=c(0,1))
+
+```
+
+```{r include=FALSE}
+library(gridExtra)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M9,M10, ncol=2)
+
+```
+
+
+
+
+### Katrina Sample
+```{r include = FALSE}
+DNZ15_Katrina$count_fema_sfha_1k <- DNZ15_Katrina$count_fema_sfha / 1000
+DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M <- DNZ15_Katrina$NFIP_ICCadj_YOLZ / 1000000
+DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M <- DNZ15_Katrina$IHP_fldDamAmountAdjDNZ /10000000
+DNZ15_Katrina$TotPop_10k <- DNZ15_Katrina$TotPop / 10000
+
+#Creating deciles:
+DNZ15_Katrina$MHVadj_100k_dec <- NA
+DNZ15_Katrina$MHVadj_100k_dec <- ntile(DNZ15_Katrina$MHVadj_100k, 10)  
+table(DNZ15_Katrina$MHVadj_100k_dec)
+DNZ15_Katrina$MHVadj_100k_dec <- as.factor(DNZ15_Katrina$MHVadj_100k_dec)
+tapply(DNZ15_Katrina$MHVadj_100k, DNZ15_Katrina$MHVadj_100k_dec, summary)
+tapply(DNZ15_Katrina$felev, DNZ15_Katrina$MHVadj_100k_dec, summary)
+
+DNZ15_Katrina$fWhite_dec <- NA
+DNZ15_Katrina$fWhite_dec <- ntile(DNZ15_Katrina$fWhite, 10)  
+table(DNZ15_Katrina$fWhite_dec)
+DNZ15_Katrina$fWhite_dec <- as.factor(DNZ15_Katrina$fWhite_dec)
+
+DNZ15_Katrina$RepRate_dec <- NA
+DNZ15_Katrina$RepRate_dec <- ntile(DNZ15_Katrina$RepRate, 10)  
+table(DNZ15_Katrina$RepRate_dec)
+DNZ15_Katrina$RepRate_dec <- as.factor(DNZ15_Katrina$RepRate_dec)
+
+DNZ15_Katrina$ZCTA_shore_dec <- NA
+DNZ15_Katrina$ZCTA_shore_dec <- ntile(DNZ15_Katrina$ZCTA_shore, 10)  
+table(DNZ15_Katrina$ZCTA_shore_dec)
+DNZ15_Katrina$ZCTA_shore_dec <- as.factor(DNZ15_Katrina$ZCTA_shore_dec)
+
+DNZ15_Katrina$count_fema_sfha_1k_dec <- NA
+DNZ15_Katrina$count_fema_sfha_1k_dec <- ntile(DNZ15_Katrina$count_fema_sfha_1k , 10)  
+table(DNZ15_Katrina$count_fema_sfha_1k_dec)
+DNZ15_Katrina$count_fema_sfha_1k_dec <- as.factor(DNZ15_Katrina$count_fema_sfha_1k_dec)
+
+DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M_dec <- NA
+DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M_dec <- ntile(DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M, 10)  
+table(DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M_dec)
+DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M_dec <- as.factor(DNZ15_Katrina$NFIP_ICCadj_YOLZ_1M_dec)
+
+DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M_dec <- NA
+DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M_dec <- ntile(DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M, 10)  
+table(DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M_dec)
+DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M_dec <- as.factor(DNZ15_Katrina$IHP_fldDamAmountAdjDNZ_10M_dec)
+
+DNZ15_Katrina$Hurricane_dec <- NA
+DNZ15_Katrina$Hurricane_dec <- ntile(DNZ15_Katrina$Hurricane, 10)  
+table(DNZ15_Katrina$Hurricane_dec)
+DNZ15_Katrina$Hurricane_dec <- as.factor(DNZ15_Katrina$Hurricane_dec)
+
+DNZ15_Katrina$TotPop_10k_dec <- NA
+DNZ15_Katrina$TotPop_10k_dec <- ntile(DNZ15_Katrina$TotPop_10k, 10)  
+table(DNZ15_Katrina$TotPop_10k_dec)
+DNZ15_Katrina$TotPop_10k_dec <- as.factor(DNZ15_Katrina$TotPop_10k_dec)
+
+DNZ15_Katrina$fOwnOcc_dec <- NA
+DNZ15_Katrina$fOwnOcc_dec <- ntile(DNZ15_Katrina$fOwnOcc, 10)  
+table(DNZ15_Katrina$fOwnOcc_dec)
+DNZ15_Katrina$fOwnOcc_dec <- as.factor(DNZ15_Katrina$fOwnOcc_dec)
+
+
+```
+
+```{r include = FALSE}
+B1 <- ggplot(data=DNZ15_Katrina, aes(x=MHVadj_100k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("MHV Deciles")
+
+B2 <- ggplot(data=DNZ15_Katrina, aes(x=fWhite_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fWhite Deciles")
+
+B3 <- ggplot(data=DNZ15_Katrina, aes(x=RepRate_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("RepRate Deciles")
+
+B4 <-ggplot(data=DNZ15_Katrina, aes(x=ZCTA_shore_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("ZCTA_shore Deciles")
+
+B5 <-ggplot(data=DNZ15_Katrina, aes(x=count_fema_sfha_1k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("FEMA SFHA Deciles")
+
+B6 <-ggplot(data=DNZ15_Katrina, aes(x=NFIP_ICCadj_YOLZ_1M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("NFIP ICC Deciles")
+
+B7 <-ggplot(data=DNZ15_Katrina, aes(x=IHP_fldDamAmountAdjDNZ_10M_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("IHP damage Deciles")
+
+B8 <-ggplot(data=DNZ15_Katrina, aes(x=Hurricane_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Hurricane Deciles")
+
+B9 <-ggplot(data=DNZ15_Katrina, aes(x=TotPop_10k_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("Tot. Pop. Deciles")
+
+B10 <-ggplot(data=DNZ15_Katrina, aes(x=fOwnOcc_dec, y=felev))+
+  geom_boxplot(outlier.shape = NA)+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  xlab("fOwnOcc Deciles")
+
+```
+
+
+```{r include=FALSE}
+#Logistic plots
+
+#MHV
+L1 <- ggplot(DNZ15_Katrina, aes(x=MHVadj_100k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("MHV 100k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+
+#fwhite
+L2 <- ggplot(DNZ15_Katrina, aes(x=fWhite, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction White")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#RepRate
+L3 <- ggplot(DNZ15_Katrina, aes(x=RepRate, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("County Republican Vote Rate")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#ZCTA_shore
+L4 <- ggplot(DNZ15_Katrina, aes(x=ZCTA_shore, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("ZCTA_shore")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#Count HUs FEMA SFHA
+L5 <- ggplot(DNZ15_Katrina, aes(x=count_fema_sfha_1k , y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Count of HUs in FEMA SFHA (1K)")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#NFIP ICC
+L6 <- ggplot(DNZ15_Katrina, aes(x=NFIP_ICCadj_YOLZ_1M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("NFIP ICC Est. $1M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#IHP Damages
+L7 <- ggplot(DNZ15_Katrina, aes(x=IHP_fldDamAmountAdjDNZ_10M, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("IHP Damage Est. $10M")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#Hurricane
+L8 <- ggplot(DNZ15_Katrina, aes(x=Hurricane, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Hurricane")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))+
+  scale_x_continuous(breaks=c(1,0))
+
+#TotPop
+L9 <- ggplot(DNZ15_Katrina, aes(x=TotPop_10k, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Total Population 10k")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+#fOwnOcc
+L10 <- ggplot(DNZ15_Katrina, aes(x=fOwnOcc, y=felev))+
+  geom_point(alpha = 0.10)+
+  stat_smooth(method = "glm", method.args = list(family=binomial), col="magenta")+
+  ylab("felev")+
+  xlab("Fraction of Owner Occ. HUs")+
+  theme(text = element_text(size=8))+
+  scale_y_continuous(breaks=c(1,0))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1, B1,
+             L2, B2,
+             L3, B3,
+             L4, B4,
+             L5, B5,ncol=2)
+
+grid.arrange(L6,B6,
+             L7,B7,
+             L9,B9,
+             L10,B10, ncol=2)
+```
+
+## Pearson's Correlation Matrix of IVs: 
+### Pearson: Full Sample
+```{r include=FALSE}
+##Corr plot
+names(DNZ15)
+
+IVs1<- DNZ15[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+```
+
+### Pearson: "Less Mix" Sample
+```{r include=FALSE}
+##Corr plot
+names(DNZ15_lessMix)
+
+IVs1<- DNZ15_lessMix[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+```
+
+
+### Pearson: "After 1993" Sample
+```{r include=FALSE}
+##Corr plot
+IVs1<- DNZ15_After1993[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+```
+
+
+### Pearson: "Without Sandy" Sample
+```{r include=FALSE}
+##Corr plot
+IVs1<- DNZ15_WOSandy[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+```
+
+
+### Pearson: "Without Katrina" Sample
+```{r include=FALSE}
+##Corr plot
+IVs1<- DNZ15_WOKatrina[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+```
+
+
+
+### Pearson ZCTA_shore Sample
+```{r include=FALSE}
+##Corr plot
+names(DNZ15)
+
+IVs1<- DNZ15_ZCTA_shore[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "count_fema_sfha_W_1k",
+                   #"NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M"
+                   #"Hurricane",
+                   #"TotPop_W_10k",
+                   #"fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+
+```
+
+
+### Pearson Sandy Sample
+```{r include=FALSE}
+##Corr plot
+names(DNZ15)
+
+IVs1<- DNZ15_Sandy[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore",
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+
+```
+
+
+### Pearson Katrina Sample
+```{r include=FALSE}
+##Corr plot
+names(DNZ15)
+
+IVs1<- DNZ15_Katrina[,c("MHVadj_W_100k",
+                   "fWhite",
+                   "RepRate",
+                   "ZCTA_shore",
+                   "count_fema_sfha_W_1k",
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "TotPop_W_10k",
+                   "fOwnOcc"
+               )]
+
+
+names(IVs1)[names(IVs1)=="felev"]<- "felev"
+names(IVs1)[names(IVs1)=="MHVadj_W_100k"]<- "Median Home Value $100k (W)"
+names(IVs1)[names(IVs1)=="fWhite"]<- "Fraction White"
+names(IVs1)[names(IVs1)=="ZCTA_shore"]<- "Shoreline ZCTA"
+names(IVs1)[names(IVs1)=="RepRate"]<- "County Republican Vote Rate"
+names(IVs1)[names(IVs1)=="SevereStorm"]<- "Severe Storm"
+names(IVs1)[names(IVs1)=="count_fema_sfha_W_1k"]<- "Count of HUs in FEMA SFHA 1k (W)"
+names(IVs1)[names(IVs1)=="NFIP_AllClaimsAdj_YOLZ_W_10M"]<- "NFIP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="NFIP_ICCadj_YOLZ_W_1M"]<- "NFIP ICC Est. $1M (W)"
+names(IVs1)[names(IVs1)=="IHP_fldDamAmountAdjDNZ_W_10M"]<- "IHP Damage Est. $10M (W)"
+names(IVs1)[names(IVs1)=="TotPop_W_10k"]<- "Total Population 10k (W)"
+names(IVs1)[names(IVs1)=="fOwnOcc"]<- "Fraction of Owner Occ. HUs"
+
+
+```
+
+```{r echo=FALSE}
+corrplot(cor(IVs1),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+
+
+```
+
