@@ -1,6 +1,6 @@
-#Purpose: DNZ fusing
+#Purpose: Joining DNZ base with Disaster, Census, NFIP, IHP, Political, and State data
 
-#note: need to rework the paths to the data files
+#Ok to Run 7/12/24
 
 ##Setup####
 getwd()
@@ -88,7 +88,7 @@ range(myHMA10$DNZ)
 
 #splitting out GZCTA and DN####
 DNZ <- DNZ_FS_HMGP
-head(DNZ1)
+head(DNZ)
 DNZ$DN <- substr(DNZ$DNZ, 1,4)
 range(DNZ$DN)
 DNZ$GZCTA <- substr(DNZ$DNZ, 5,11)
@@ -215,7 +215,7 @@ DNZ7$TotPop <- ifelse(DNZ7$fyDeclaredLess1 == 2022, DNZ7$y22_TotPopE, DNZ7$TotPo
 DNZ7$TotPop <- ifelse(DNZ7$fyDeclaredLess1 == 2023, DNZ7$y22_TotPopE, DNZ7$TotPop)
 
 names(DNZ7)
-table(is.na(DNZ7$TotPop)) #4441
+table(is.na(DNZ7$TotPop)) #87
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, TotPop, y90_TotPop, y00_TotPop, y10_TotPop, y11_TotPopE, y12_TotPopE, y13_TotPopE, y14_TotPopE,
          y15_TotPopE,y16_TotPopE, y17_TotPopE, y18_TotPopE, y19_TotPopE, y20_TotPopE, y21_TotPopE, y22_TotPopE)
@@ -239,7 +239,7 @@ DNZ7$WhitePct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_WhitePct, DNZ7$Wh
 DNZ7$WhitePct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_WhitePct, DNZ7$WhitePct)
 DNZ7$WhitePct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_WhitePct, DNZ7$WhitePct)
 
-table(is.na(DNZ7$WhitePct)) #4443
+table(is.na(DNZ7$WhitePct)) #88
 names(DNZ7)
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, WhitePct, y90_WhitePct, y00_WhitePct, y10_WhitePct, y11_WhitePct, y12_WhitePct, y13_WhitePct, y14_WhitePct,
@@ -264,7 +264,7 @@ DNZ7$BlackPct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_BlackPct, DNZ7$Bl
 DNZ7$BlackPct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_BlackPct, DNZ7$BlackPct)
 DNZ7$BlackPct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_BlackPct, DNZ7$BlackPct)
 
-table(is.na(DNZ7$BlackPct)) #4443
+table(is.na(DNZ7$BlackPct)) #88
 names(DNZ7)
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, BlackPct, y90_BlackPct, y00_BlackPct, y10_BlackPct, y11_BlackPct, y12_BlackPct, y13_BlackPct, y14_BlackPct,
@@ -290,7 +290,7 @@ DNZ7$HispPct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_HispPct, DNZ7$Hisp
 DNZ7$HispPct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_HispPct, DNZ7$HispPct)
 DNZ7$HispPct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_HispPct, DNZ7$HispPct)
 
-table(is.na(DNZ7$HispPct)) #4443
+table(is.na(DNZ7$HispPct)) #88
 names(DNZ7)
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, HispPct, y90_HispPct, y00_HispPct, y10_HispPct, y11_HispPct, y12_HispPct, y13_HispPct, y14_HispPct,
@@ -319,7 +319,7 @@ DNZ7$MHIadj <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_MHIE, DNZ7$MHIadj)
 DNZ7$MHIadj <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_MHIadj, DNZ7$MHIadj)
 DNZ7$MHIadj <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y21_MHIadj, DNZ7$MHIadj)
 
-table(is.na(DNZ7$MHIadj)) #4211
+table(is.na(DNZ7$MHIadj)) #136
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, MHIadj, y00_MHIadj,  y11_MHIadj, y12_MHIadj, y13_MHIadj, y14_MHIadj,
          y15_MHIadj,y16_MHIadj, y17_MHIadj, y18_MHIadj, y19_MHIadj, y20_MHIE, y21_MHIadj, y22_MHIadj)
@@ -346,7 +346,7 @@ DNZ7$MHVadj <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_MHVE, DNZ7$MHVadj)
 DNZ7$MHVadj <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_MHVadj, DNZ7$MHVadj)
 DNZ7$MHVadj <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y21_MHVadj, DNZ7$MHVadj)
 
-table(is.na(DNZ7$MHVadj)) #4211
+table(is.na(DNZ7$MHVadj)) #134
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, MHVadj, y00_MHVadj,  y11_MHVadj, y12_MHVadj, y13_MHVadj, y14_MHVadj,
          y15_MHVadj,y16_MHVadj, y17_MHVadj, y18_MHVadj, y19_MHVadj, y20_MHVE, y21_MHVadj, y22_MHVadj)
@@ -372,7 +372,7 @@ DNZ7$PopDenseSqMile <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_PopDenseSqM
 DNZ7$PopDenseSqMile <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_PopDenseSqMile, DNZ7$PopDenseSqMile)
 DNZ7$PopDenseSqMile <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_PopDenseSqMile, DNZ7$PopDenseSqMile)
 
-table(is.na(DNZ7$PopDenseSqMile)) #4032
+table(is.na(DNZ7$PopDenseSqMile)) #83
 
 
 ##TotHU####
@@ -394,7 +394,7 @@ DNZ7$TotHU <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_TotHUE, DNZ7$TotHU)
 DNZ7$TotHU <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_TotHUE, DNZ7$TotHU)
 DNZ7$TotHU <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_TotHUE, DNZ7$TotHU)
 
-table(is.na(DNZ7$TotHU)) #4441
+table(is.na(DNZ7$TotHU)) #87
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, TotHU, y90_TotHU, y00_TotHU,  y11_TotHUE, y12_TotHUE, y13_TotHUE, y14_TotHUE,
          y15_TotHUE,y16_TotHUE, y17_TotHUE, y18_TotHUE, y19_TotHUE, y20_TotHUE, y21_TotHUE, y22_TotHUE)
@@ -420,7 +420,7 @@ DNZ7$TotOccHU <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_TotOccHUE, DNZ7$T
 DNZ7$TotOccHU <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_TotOccHUE, DNZ7$TotOccHU)
 DNZ7$TotOccHU <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_TotOccHUE, DNZ7$TotOccHU)
 
-table(is.na(DNZ7$TotOccHU)) #4441
+table(is.na(DNZ7$TotOccHU)) #87
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, TotOccHU, y90_TotOcc_HU, y00_TotOccHU,  y11_TotOccHUE, y12_TotOccHUE, y13_TotOccHUE, y14_TotOccHUE,
          y15_TotOccHUE,y16_TotOccHUE, y17_TotOccHUE, y18_TotOccHUE, y19_TotOccHUE, y20_TotOccHUE, y21_TotOccHUE, y22_TotOccHUE)
@@ -444,7 +444,7 @@ DNZ7$OwnOccPct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_OwnOccPct, DNZ7$
 DNZ7$OwnOccPct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_OwnOccPct, DNZ7$OwnOccPct)
 DNZ7$OwnOccPct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_OwnOccPct, DNZ7$OwnOccPct)
 
-table(is.na(DNZ7$OwnOccPct)) #4444
+table(is.na(DNZ7$OwnOccPct)) #89
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, OwnOccPct, y90_OwnOccPct, y00_OwnOccPct,  y11_OwnOccPct, y12_OwnOccPct, y13_OwnOccPct, y14_OwnOccPct,
          y15_OwnOccPct,y16_OwnOccPct, y17_OwnOccPct, y18_OwnOccPct, y19_OwnOccPct, y20_OwnOccPct, y21_OwnOccPct, y22_OwnOccPct)
@@ -467,7 +467,7 @@ DNZ7$RentOccPct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_RentOccPct, DNZ
 DNZ7$RentOccPct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_RentOccPct, DNZ7$RentOccPct)
 DNZ7$RentOccPct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_RentOccPct, DNZ7$RentOccPct)
 
-table(is.na(DNZ7$RentOccPct)) #4444
+table(is.na(DNZ7$RentOccPct)) #89
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, RentOccPct, y90_RentOccPct, y00_RentOccPct,  y11_RentOccPct, y12_RentOccPct, y13_RentOccPct, y14_RentOccPct,
          y15_RentOccPct,y16_RentOccPct, y17_RentOccPct, y18_RentOccPct, y19_RentOccPct, y20_RentOccPct, y21_RentOccPct, y22_RentOccPct)
@@ -491,7 +491,7 @@ DNZ7$S2ndHomePct <- ifelse(DNZ7$fyDeclaredLess1 == 2020, DNZ7$y20_2ndHomePct, DN
 DNZ7$S2ndHomePct <- ifelse(DNZ7$fyDeclaredLess1 == 2021, DNZ7$y21_2ndHomePct, DNZ7$S2ndHomePct)
 DNZ7$S2ndHomePct <- ifelse(DNZ7$fyDeclaredLess1 >= 2022, DNZ7$y22_2ndHomePct, DNZ7$S2ndHomePct)
 
-table(is.na(DNZ7$S2ndHomePct)) #4444
+table(is.na(DNZ7$S2ndHomePct)) #95
 test <- DNZ7 %>%
   select(GZCTA, fyDeclaredLess1, S2ndHomePct, y90_2ndHomePct, y00_2ndHomePct,  y11_2ndHomePct, y12_2ndHomePct, y13_2ndHomePct, y14_2ndHomePct,
          y15_2ndHomePct,y16_2ndHomePct, y17_2ndHomePct, y18_2ndHomePct, y19_2ndHomePct, y20_2ndHomePct, y21_2ndHomePct, y22_2ndHomePct)
@@ -532,6 +532,7 @@ names(DNZ9c)
 table(DNZ9c$ZCTA_CSC)
 DNZ9c$ZCTA_CSC[is.na(DNZ9c$ZCTA_CSC)]<-0
 names(DNZ9c)[names(DNZ9c)=="ZCTA_CSC"]<-"CSC"
+table(DNZ9c$CSC)
 
 ## Joining Shore####
 names(DNZ9c)

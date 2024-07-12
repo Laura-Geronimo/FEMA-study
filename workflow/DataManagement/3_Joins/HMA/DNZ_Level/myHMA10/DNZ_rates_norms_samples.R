@@ -33,7 +33,6 @@ sum(DNZ9$Elev) #11,062
 #keeping vars of immediate interest####
 #REMEMBER- need to do rates and norms still - but after you get to a sample with complete data on vars of interest
 names(DNZ9) 
-DNZ9$GZC
 DNZ10 <- DNZ9[,c("DNZ", "DN",
                 "fyDeclared", 
                 "YOLZ",
@@ -53,12 +52,12 @@ DNZ10 <- DNZ9[,c("DNZ", "DN",
                 "IHP_fldDamAmountAdjDNZ",
                 "IHP_rentalAssistanceAmountAdjDNZ",
                 "TotPop",
+                "PopDenseSqMile",
                 "WhitePct",
                 "BlackPct",
                 "HispPct",
                 "MHIadj",
                 "MHVadj", 
-                "PopDenseSqMile",
                 "TotHU", 
                 "TotOccHU",
                 "OwnOccPct",
@@ -159,6 +158,8 @@ hist(DNZ11$Total_RateBy_count_sfha_pct)
 table(is.infinite(DNZ11$Acqui_RateBy_count_sfha_pct)) #62
 table(is.infinite(DNZ11$Elev_RateBy_count_sfha_pct)) #6
 table(is.infinite(DNZ11$Total_RateBy_count_sfha_pct)) #66
+table(is.infinite(DNZ11$PopDenseSqMile)) #0
+
 
 #Managing infinite NAN####
 DNZ11[sapply(DNZ11, is.infinite)]<- NaN
@@ -212,6 +213,7 @@ plot(DNZ11$TotPop_W_10k)
 
 #PopDense_W_1k ####
 range(DNZ11$PopDenseSqMile)
+
 plot(DNZ11$PopDenseSqMile)
 
 quantile(DNZ11$PopDense, probs=c(0.01, 0.5, 0.99),na.rm=T)
@@ -358,7 +360,6 @@ DNZ11$f_fs_risk_500_year00 <- DNZ11$pct_fs_risk_500_year00 / 100
 range(DNZ11$f_fs_risk_500_year00, na.rm=T)
 plot(DNZ11$f_fs_risk_500_year00)
 
-
 ##TotOccHU_W_10k####
 range(DNZ11$TotOccHU, na.rm=T)
 plot(DNZ11$TotOccHU)
@@ -376,6 +377,24 @@ plot(DNZ11$TotOccHU_W)
 DNZ11$TotOccHU_W_10k <- DNZ11$TotOccHU_W/10000
 range(DNZ11$TotOccHU_W_10k,na.rm=T)
 plot(DNZ11$TotOccHU_W_10k)
+
+##TotHU_W_10k####
+range(DNZ11$TotHU, na.rm=T)
+plot(DNZ11$TotHU)
+plot(DNZ11$TotHU, DNZ11$WhitePct)
+plot(DNZ11$TotHU, DNZ11$Elev)
+plot(DNZ11$TotHU, DNZ11$Acqui)
+
+quantile(DNZ11$TotHU, probs=c(0.01, 0.5, 0.99),na.rm=T)
+DNZ11$TotHU_W <- DNZ11$TotHU
+DNZ11$TotHU_W[DNZ11$TotHU_W >=22935 ]<- 22935
+DNZ11$TotHU_W[DNZ11$TotHU_W <= 133 ]<-  133
+range(DNZ11$TotHU_W, na.rm=T)
+plot(DNZ11$TotHU_W)
+
+DNZ11$TotHU_W_10k <- DNZ11$TotHU_W/10000
+range(DNZ11$TotHU_W_10k,na.rm=T)
+plot(DNZ11$TotHU_W_10k)
 
 #Acqui_RateBy_count_sfha_pct_W####
 plot(DNZ11$Acqui_RateBy_count_sfha_pct)
@@ -574,22 +593,21 @@ DNZ12 <-DNZ11[,c("DNZ","DN","fyDeclared", "YOLZ","GZCTA","stateNumberCode", "p2s
                  #"Combine_NFIP_IHPAdj_RateBy_count_sfha_10k_W",
                  "NFIP_BuildClaimAdj_YOLZ",
                  "NFIP_ContClaimAdj_YOLZ",
-                 "TotPop",
-                 "TotPop_W_10k",
-                 "PopDense_W_1k",
+                 "TotPop","TotPop_W_10k",
+                 "PopDenseSqMile","PopDense_W_1k",
                  "WhitePct", "fWhite",
                  "BlackPct", "fBlack",
                  "HispPct", "fHisp",
-                 "MHIadj_W_10k",
+                 "MHIadj","MHIadj_W_10k",
                  "MHVadj", "MHVadj_100k","MHVadj_W_100k",
-                 "PopDense_W_1k",
-                 "TotOccHU_W_10k",
+                 "TotHU", "TotHU_W_10k" ,
+                 "TotOccHU" , "TotOccHU_W_10k",
                  "OwnOccPct", "fOwnOcc",
                  "RentOccPct", "fRentOcc",
                  "S2ndHomePct", "fS2ndHome",
                  #"MedYrBuilt","Decade_MedYrBuilt",
-                 "TaxBaseEst_1B_W",
-                 "RepRate")]
+                 "TaxBaseEst_1B","TaxBaseEst_1B_W",
+                 "RepRate", "mrp_ideology")]
 
 
 names(DNZ12)
@@ -631,9 +649,10 @@ sum(DNZ14$Acqui) #48540
 
 
 DNZ_V1 <- DNZ14
+names(DNZ_V1)
 
 
 ##Writing out files
-path1 <- 'C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ16'
+path1 <- 'C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1'
 write.csv(DNZ_V1, file.path(path1, "DNZ_V1.csv"), row.names=TRUE)
 

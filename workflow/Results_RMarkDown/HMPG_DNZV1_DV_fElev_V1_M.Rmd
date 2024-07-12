@@ -1,0 +1,448 @@
+
+
+---
+title: "Supplementary Information: Models"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    theme: united
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+##Libraries
+
+library(ggplot2)
+library(dplyr)
+library(caret)
+
+library(pacman)
+library(stringr)
+
+library(Hmisc)
+library(tidycensus)
+library(tidyverse)
+library(corrplot)
+library(data.table)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+
+library(forcats)
+library(boot)
+library(bootstrap)
+library(fixest)
+library(lmtest)
+library(sandwich)
+library(cowplot)
+
+library(pROC)
+library(MASS)
+
+library(SSVS)
+
+
+options (scipen=999)
+
+#importing data
+DNZV1 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZ_V1.csv')
+names(DNZV1)
+DNZV1 <- DNZV1[,c(-1)]
+
+#creating subsets
+DNZV1_lessMix <- subset(DNZV1, felev==0 | felev==1)
+DNZV1_After1993 <- subset(DNZV1, fyDeclared>1993)
+DNZV1_CSC <- subset(DNZV1, CSC==1) 
+DNZV1_ZCTAshore <- subset(DNZV1, ZCTA_shore==1) 
+DNZV1_ZCTAshore_lessMix <- subset(DNZV1_ZCTAshore, felev==0 | felev==1)
+
+DNZV1_Katrina <- subset(DNZV1, HurricaneName=="katrina") 
+DNZV1_Sandy <- subset(DNZV1, HurricaneName=="sandy") 
+DNZV1_Mix <- subset(DNZV1, felev>0 & felev<1)
+
+
+
+```
+
+#SVSS tests
+```{r include = FALSE}
+outcome <- "felev"
+predictors <- c("TotPop_W_10k",
+                   "PopDense_W_1k",
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotOccHU_W_10k",
+                   "TotHU_W_10k",
+                   "RepRate",
+                   "mrp_ideology",
+                   "fOwnOcc",
+                   "fRentOcc",
+                   "fS2ndHome", 
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_AllClaimsAdj_YOLZ", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",                  
+                   "fyDeclared",
+                   "StateNumLG")
+
+
+results_fs <- ssvs(data=DNZV1,
+     y=outcome,
+     x=predictors,
+     continuous = FALSE,
+     inprob=0.5,
+     runs=1000,
+     burn=500)
+
+
+plot(results_fs)
+
+##Shore sample
+
+outcome <- "felev"
+predictors <- c("TotPop_W_10k",
+                   "PopDense_W_1k",
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotOccHU_W_10k",
+                   "TotHU_W_10k",
+                   "RepRate",
+                   "mrp_ideology",
+                   "fOwnOcc",
+                   "fRentOcc",
+                   "fS2ndHome", 
+                   "TaxBaseEst_1B_W",
+                   #"ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_AllClaimsAdj_YOLZ", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane")
+
+
+results_zs <- ssvs(data=DNZV1_ZCTAshore,
+     y=outcome,
+     x=predictors,
+     continuous = FALSE,
+     inprob=0.5,
+     runs=1000,
+     burn=500)
+
+plot(results_zs)
+
+```
+
+# Logistic model comparing Disertation with SVSS predictors 
+## Full sample
+```{r include = FALSE}
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+Dis_M1 <- glm(felev~
+                MHVadj_W_100k +
+                fWhite +
+                RepRate +
+                ZCTA_shore +
+                count_fema_sfha_W_1k +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                TotPop_W_10k +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1,family=binomial(link = "logit"))
+summary(Dis_M1)
+
+##testing for overdispersion
+deviance(Dis_M1)/df.residual(Dis_M1) #0.52
+
+##testing for multicollinearity
+Dis_M1_Vif <- car::vif(Dis_M1) #
+Dis_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+Dis_M1Exp <- Dis_M1
+Dis_M1Exp$coefficients <- exp(Dis_M1Exp$coefficients)
+Dis_M1Exp
+
+# pseudo R-squared
+Dis_R1 <- (1-(Dis_M1$deviance)/(Dis_M1$null.deviance))
+Dis_R1 <- round(Dis_R1,2)
+Dis_R1
+
+
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+SVSS_M1 <- glm(felev~
+            count_fema_sfha_W_1k +
+            Hurricane +
+            MHVadj_W_100k +
+            ZCTA_shore +
+            MHIadj_W_10k +
+            fWhite +
+            TaxBaseEst_1B_W +
+            NFIP_ICCadj_YOLZ_W_1M +
+            mrp_ideology +
+            fWhite+
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1,family=binomial(link = "logit"))
+summary(SVSS_M1)
+
+##testing for overdispersion
+deviance(SVSS_M1)/df.residual(SVSS_M1) #0.52
+
+##testing for multicollinearity
+SVSS_M1_Vif <- car::vif(SVSS_M1) #
+SVSS_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+SVSS_M1Exp <- SVSS_M1
+SVSS_M1Exp$coefficients <- exp(SVSS_M1Exp$coefficients)
+SVSS_M1Exp
+
+# pseudo R-squared
+SVSS_R1 <- (1-(SVSS_M1$deviance)/(SVSS_M1$null.deviance))
+SVSS_R1 <- round(SVSS_R1,2)
+SVSS_R1
+
+##Model All
+V1 <- stargazer(Dis_M1, SVSS_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes", "Yes"),
+                                 c("Year FE", "Yes", "Yes"),
+                                 c("Pseudo $R2$", Dis_R1, SVSS_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/fs_dis_svss_fe.htm")
+
+```
+
+# Logistic model comparing Disertation with SVSS predictors 
+## Shoreline Sample
+```{r include = FALSE}
+##SVSS_M1: All + Baseline (w year FEs)
+Dis_M1 <- glm(felev~
+                MHVadj_W_100k +
+                fWhite +
+                RepRate +
+                #ZCTA_shore +
+                count_fema_sfha_W_1k +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                TotPop_W_10k +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1_ZCTAshore,family=binomial(link = "logit"))
+summary(Dis_M1)
+
+##testing for overdispersion
+deviance(Dis_M1)/df.residual(Dis_M1) #0.87
+
+##testing for multicollinearity
+Dis_M1_Vif <- car::vif(Dis_M1) #
+Dis_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+Dis_M1Exp <- Dis_M1
+Dis_M1Exp$coefficients <- exp(Dis_M1Exp$coefficients)
+Dis_M1Exp
+
+# pseudo R-squared
+Dis_R1 <- (1-(Dis_M1$deviance)/(Dis_M1$null.deviance))
+Dis_R1 <- round(Dis_R1,2)
+Dis_R1
+
+
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+SVSS_M1 <- glm(felev~
+            count_fema_sfha_W_1k +
+            Hurricane +
+            MHVadj_W_100k +
+            mrp_ideology +
+            #ZCTA_shore +
+            #MHIadj_W_10k +
+            #fWhite +
+            #TaxBaseEst_1B_W +
+            TotPop_W_10k +
+            NFIP_ICCadj_YOLZ_W_1M +
+            #fWhite+
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_ZCTAshore,family=binomial(link = "logit"))
+summary(SVSS_M1)
+
+##testing for overdispersion
+deviance(SVSS_M1)/df.residual(SVSS_M1) #
+
+##testing for multicollinearity
+SVSS_M1_Vif <- car::vif(SVSS_M1) #
+SVSS_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+SVSS_M1Exp <- SVSS_M1
+SVSS_M1Exp$coefficients <- exp(SVSS_M1Exp$coefficients)
+SVSS_M1Exp
+
+# pseudo R-squared
+SVSS_R1 <- (1-(SVSS_M1$deviance)/(SVSS_M1$null.deviance))
+SVSS_R1 <- round(SVSS_R1,2)
+SVSS_R1
+
+##Model All
+V1 <- stargazer(Dis_M1, SVSS_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes", "Yes"),
+                                 c("Year FE", "Yes", "Yes"),
+                                 c("Pseudo $R2$", Dis_R1, SVSS_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/zs_dis_svss_fe.htm")
+
+```
+
+
+# Negative binomial on elev counts - Full Set (SVSS vars from felev)
+```{r include=FALSE}
+# Load necessary libraries
+library(MASS)
+library(stargazer)
+
+# Fit Negative Binomial regression model
+nb_model <- glm.nb(Elev ~ count_fema_sfha_W_1k + Hurricane + MHVadj_W_100k + ZCTA_shore +
+                   MHIadj_W_10k + fWhite + RepRate + TaxBaseEst_1B_W +
+                   NFIP_ICCadj_YOLZ_W_1M + mrp_ideology + fWhite +
+                   factor(StateNumLG) + factor(fyDeclared),
+                 data=DNZV1)
+
+# Summary of the model
+summary(nb_model)
+
+# Exponentiate the coefficients
+exp_coef <- exp(coef(nb_model))
+exp_coef_df <- data.frame(
+  Predictor = names(exp_coef),
+  Exp_Coefficient = exp_coef
+)
+print(exp_coef_df)
+
+# Exponentiate the confidence intervals
+confint_nb_model <- exp(confint(nb_model))
+confint_df <- data.frame(
+  Predictor = rownames(confint_nb_model),
+  Lower_CI = confint_nb_model[, 1],
+  Upper_CI = confint_nb_model[, 2]
+)
+print(confint_df)
+
+# Combine the exponentiated coefficients and their confidence intervals
+results_df <- merge(exp_coef_df, confint_df, by = "Predictor")
+print(results_df)
+
+# Display model summary with stargazer
+library(stargazer)
+stargazer(nb_model, type="html",
+          omit=c("StateNumLG", "fyDeclared"), 
+          apply.coef=exp,
+          apply.ci=exp,
+          t.auto=F,
+          p.auto=F,
+          title="Negative Binomial Regression Model for Count of Elevations - Full Set",
+          dep.var.labels = c("Count of Elevations"),
+          digits=2,
+          column.sep.width = "10pt",
+          single.row = FALSE,
+          align=TRUE,
+          out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/fs_nb_elev.htm")
+```
+
+
+# Negative binomial on elev counts - Full Set (SVSS vars from felev)
+```{r include=FALSE}
+# Load necessary libraries
+library(MASS)
+library(stargazer)
+
+# Fit Negative Binomial regression model
+nb_model <- glm.nb(Elev ~ count_fema_sfha_W_1k + Hurricane + MHVadj_W_100k + 
+                   MHIadj_W_10k + fWhite + RepRate + TaxBaseEst_1B_W +
+                   NFIP_ICCadj_YOLZ_W_1M + mrp_ideology + fWhite +
+                   factor(StateNumLG) + factor(fyDeclared),
+                 data=DNZV1_ZCTAshore)
+
+# Summary of the model
+summary(nb_model)
+
+# Exponentiate the coefficients
+exp_coef <- exp(coef(nb_model))
+exp_coef_df <- data.frame(
+  Predictor = names(exp_coef),
+  Exp_Coefficient = exp_coef
+)
+print(exp_coef_df)
+
+# Exponentiate the confidence intervals
+confint_nb_model <- exp(confint(nb_model))
+confint_df <- data.frame(
+  Predictor = rownames(confint_nb_model),
+  Lower_CI = confint_nb_model[, 1],
+  Upper_CI = confint_nb_model[, 2]
+)
+print(confint_df)
+
+# Combine the exponentiated coefficients and their confidence intervals
+results_df <- merge(exp_coef_df, confint_df, by = "Predictor")
+print(results_df)
+
+# Display model summary with stargazer
+library(stargazer)
+stargazer(nb_model, type="html",
+          omit=c("StateNumLG", "fyDeclared"), 
+          apply.coef=exp,
+          apply.ci=exp,
+          t.auto=F,
+          p.auto=F,
+          title="Negative Binomial Regression Model for Count of Elevations - Shore Set",
+          dep.var.labels = c("Count of Elevations"),
+          digits=2,
+          column.sep.width = "10pt",
+          single.row = FALSE,
+          align=TRUE,
+          out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/zs_nb_elev.htm")
+```
+
