@@ -1,0 +1,626 @@
+
+
+---
+title: "Supplementary Information: Models"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    theme: united
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+##Libraries
+
+library(ggplot2)
+library(dplyr)
+library(caret)
+
+library(pacman)
+library(stringr)
+
+library(Hmisc)
+library(tidycensus)
+library(tidyverse)
+library(corrplot)
+library(data.table)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+
+library(forcats)
+library(boot)
+library(bootstrap)
+library(fixest)
+library(lmtest)
+library(sandwich)
+library(cowplot)
+
+library(pROC)
+library(MASS)
+
+library(SSVS)
+
+
+options (scipen=999)
+
+#importing data
+DNZV1 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZ_V1.csv')
+names(DNZV1)
+DNZV1 <- DNZV1[,c(-1)]
+
+#creating subsets
+DNZV1_lessMix <- subset(DNZV1, felev==0 | felev==1)
+DNZV1_After1993 <- subset(DNZV1, fyDeclared>1993)
+DNZV1_CSC <- subset(DNZV1, CSC==1) 
+DNZV1_ZCTAshore <- subset(DNZV1, ZCTA_shore==1) 
+DNZV1_ZCTAshore_lessMix <- subset(DNZV1_ZCTAshore, felev==0 | felev==1)
+
+DNZV1_Katrina <- subset(DNZV1, HurricaneName=="katrina") 
+DNZV1_Sandy <- subset(DNZV1, HurricaneName=="sandy") 
+DNZV1_Mix <- subset(DNZV1, felev>0 & felev<1)
+
+
+
+```
+
+## Full Sample Diagnostics
+
+#### SVSS test
+```{r include = FALSE}
+outcome <- "felev"
+predictors <- c("TotPop_W_10k",
+                   "PopDense_W_1k",
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotOccHU_W_10k",
+                   "TotHU_W_10k",
+                   "RepRate",
+                   "mrp_ideology",
+                   "fOwnOcc",
+                   "fRentOcc",
+                   "fS2ndHome", 
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_AllClaimsAdj_YOLZ", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",                  
+                   "fyDeclared",
+                   "StateNumLG")
+
+
+results_fs <- ssvs(data=DNZV1,
+     y=outcome,
+     x=predictors,
+     continuous = FALSE,
+     inprob=0.5,
+     runs=1000,
+     burn=500)
+
+
+plot(results_fs)
+
+
+```
+
+#### Logistic model comparing Disertation with SVSS predictors 
+```{r include = FALSE}
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+Dis_M1 <- glm(felev~
+                MHVadj_W_100k +
+                fWhite +
+                RepRate +
+                ZCTA_shore +
+                count_fema_sfha_W_1k +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                TotPop_W_10k +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1,family=binomial(link = "logit"))
+summary(Dis_M1)
+
+##testing for overdispersion
+deviance(Dis_M1)/df.residual(Dis_M1) #0.52
+
+##testing for multicollinearity
+Dis_M1_Vif <- car::vif(Dis_M1) #
+Dis_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+Dis_M1Exp <- Dis_M1
+Dis_M1Exp$coefficients <- exp(Dis_M1Exp$coefficients)
+Dis_M1Exp
+
+# pseudo R-squared
+Dis_R1 <- (1-(Dis_M1$deviance)/(Dis_M1$null.deviance))
+Dis_R1 <- round(Dis_R1,2)
+Dis_R1
+
+
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+SVSS_M1 <- glm(felev~
+            count_fema_sfha_W_1k +
+            Hurricane +
+            MHVadj_W_100k +
+            ZCTA_shore +
+            MHIadj_W_10k +
+            fWhite +
+            TaxBaseEst_1B_W +
+            NFIP_ICCadj_YOLZ_W_1M +
+            mrp_ideology +
+            fWhite+
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1,family=binomial(link = "logit"))
+summary(SVSS_M1)
+
+##testing for overdispersion
+deviance(SVSS_M1)/df.residual(SVSS_M1) #0.52
+
+##testing for multicollinearity
+SVSS_M1_Vif <- car::vif(SVSS_M1) #
+SVSS_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+SVSS_M1Exp <- SVSS_M1
+SVSS_M1Exp$coefficients <- exp(SVSS_M1Exp$coefficients)
+SVSS_M1Exp
+
+# pseudo R-squared
+SVSS_R1 <- (1-(SVSS_M1$deviance)/(SVSS_M1$null.deviance))
+SVSS_R1 <- round(SVSS_R1,2)
+SVSS_R1
+
+##Model All
+V1 <- stargazer(Dis_M1, SVSS_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes", "Yes"),
+                                 c("Year FE", "Yes", "Yes"),
+                                 c("Pseudo $R2$", Dis_R1, SVSS_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/fs_dis_svss_fe.htm")
+
+```
+
+
+
+
+
+##Correlation Matrices on select vars
+Note that in preparation for modeling, we examine all of the variables recommended in the SVSS test, plus variables that were significant in the Chi-Square and Anova tests, and are relevant to the literature based on domain knowledge. 
+
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1[,c("MHVadj_W_100k",         #SVSS
+                       "MHIadj_W_10k",          #ANOVA
+                       "fWhite",                #ANOVA
+                       "mrp_ideology",          #SVSS
+                       "fS2ndHome",             #ANOVA
+                       "TaxBaseEst_1B_W",       #SVSS
+                       "Hurricane" ,            #SVSS
+                       "ZCTA_shore",            #SVSS
+                       "count_fema_sfha_W_1k",  #SVSS
+                       "NFIP_ICCadj_YOLZ_W_1M", #SVSS
+                       "PopDense_W_1k")]        #ANOVA
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor(cor_fullSample),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.50, 
+         tl.cex=0.50, tl.col="black")
+```
+
+Given the high correlation between MHV and MHI, we decided to drop MHI.
+
+Note that there is significant correlation between several variables of interest, including MPR, MHV, tax base, fWhite, and population density.
+
+Some notes: 
+-MPR ideology is negatively correlated with MHV: as MHV increase, republican ideology decreases (counter-intuitive, unless, lower-income is correlated with republicanism)
+-MPR ideology is positively correlated with tax base
+-Tax base and MHV are positively correlated
+-FWhite and MPR ideology are positively correlated
+-fWhite is negatively correlated with a lot of the exposure variables, like Hurricane, ZCTA_Shore, and count_FEMA SFHA. However, need these controls.
+- Given
+
+Going to have to select specific hypotheses to test one at a time.
+
+
+##Stepwise Regression
+
+### Model 1: Race and Income
+Model 1: testing race and income
+     MHV, fWhite, MHV*fWhite, 
+     ZCTA_Shore
+     Hurricane
+     Count_FEMA
+     NFIP_ICC
+     Pop_Dense
+
+
+##### Correlation Matrices for M1
+
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1[,c("MHVadj_W_100k",         #SVSS
+                       #"MHIadj_W_10k",          #ANOVA
+                       "fWhite",                #ANOVA
+                       #"mrp_ideology",          #SVSS
+                       #"fS2ndHome",             #ANOVA
+                       #"TaxBaseEst_1B_W",       #SVSS
+                       "Hurricane" ,            #SVSS
+                       "ZCTA_shore",            #SVSS
+                       "count_fema_sfha_W_1k",  #SVSS
+                       "NFIP_ICCadj_YOLZ_W_1M", #SVSS
+                       "PopDense_W_1k")]        #ANOVA
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor(cor_fullSample),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+```
+
+##### M1 
+```{r include=FALSE}
+# Full model with all predictors
+fs_M1_full <- glm(felev ~     
+                       MHVadj_W_100k +
+                       fWhite+
+                       MHVadj_W_100k*fWhite +
+                       Hurricane + 
+                       ZCTA_shore +
+                       count_fema_sfha_W_1k +
+                       NFIP_ICCadj_YOLZ_W_1M +
+                       PopDense_W_1k +
+                       factor(StateNumLG) +
+                       factor(fyDeclared), data = DNZV1, family = binomial)
+
+```
+
+##### Stepwise regression using AIC
+```{r include=FALSE}
+stepwise_M1 <- stepAIC(fs_M1_full, direction = "both")
+summary(stepwise_M1)
+
+##testing for overdispersion
+deviance(stepwise_M1)/df.residual(stepwise_M1) #
+
+##testing for multicollinearity
+stepwise_M1_Vif <- car::vif(stepwise_M1) #
+stepwise_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+stepwise_M1Exp <- stepwise_M1
+stepwise_M1Exp$coefficients <- exp(stepwise_M1Exp$coefficients)
+stepwise_M1Exp
+
+# pseudo R-squared
+stepwise_R1 <- (1-(stepwise_M1$deviance)/(stepwise_M1$null.deviance))
+stepwise_R1 <- round(stepwise_R1,2)
+stepwise_R1
+
+##Model All
+V1 <- stargazer(stepwise_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", stepwise_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/fs_M1_fe.htm")
+
+
+
+```
+
+
+
+### Model 2: MPR Ideology
+Model 2: testing MPR IDeology
+     MPR Ideology, 
+     ZCTA_Shore
+     Hurricane
+     Count_FEMA
+     NFIP_ICC
+     Pop_Dense
+
+
+##### Correlation Matrices for M2
+
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1[,c(#"MHVadj_W_100k",         #SVSS
+                       #"MHIadj_W_10k",          #ANOVA
+                       #"fWhite",                #ANOVA
+                       "mrp_ideology",          #SVSS
+                       #"fS2ndHome",             #ANOVA
+                       #"TaxBaseEst_1B_W",       #SVSS
+                       "Hurricane" ,            #SVSS
+                       "ZCTA_shore",            #SVSS
+                       "count_fema_sfha_W_1k",  #SVSS
+                       "NFIP_ICCadj_YOLZ_W_1M", #SVSS
+                       "PopDense_W_1k")]        #ANOVA
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor(cor_fullSample),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+```
+
+Note that MPR Ideology and PopDense are very highly negatively correlated. Trying alternative controls
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1[,c(#"MHVadj_W_100k",         #SVSS
+                       #"MHIadj_W_10k",          #ANOVA
+                       #"fWhite",                #ANOVA
+                       "mrp_ideology",          #SVSS
+                       #"fS2ndHome",             #ANOVA
+                       #"TaxBaseEst_1B_W",       #SVSS
+                       "Hurricane" ,            #SVSS
+                       "ZCTA_shore",            #SVSS
+                       "count_fema_sfha_W_1k",  #SVSS
+                       "NFIP_ICCadj_YOLZ_W_1M", #SVSS
+                       "PopDense_W_1k",          #ANOVA
+                       "TotPop_W_10k",          #Alt control
+                       "TotHU_W_10k",           #Alt control
+                       "TotOccHU_W_10k")]       #Alt control
+       
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor(cor_fullSample),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.75, 
+         tl.cex=0.75, tl.col="black")
+```
+
+
+MPR ideology is highly correlated with all control vars. Dropping for now
+
+##### M2 
+```{r include=FALSE}
+# Full model with all predictors
+fs_M2_full <- glm(felev ~     
+                       mrp_ideology +
+                       Hurricane + 
+                       ZCTA_shore +
+                       count_fema_sfha_W_1k +
+                       NFIP_ICCadj_YOLZ_W_1M +
+                       factor(StateNumLG) +
+                       factor(fyDeclared), data = DNZV1, family = binomial)
+
+```
+
+##### Stepwise regression using AIC
+```{r include=FALSE}
+stepwise_M2 <- stepAIC(fs_M2_full, direction = "both")
+summary(stepwise_M2)
+
+##testing for overdispersion
+deviance(stepwise_M2)/df.residual(stepwise_M2) #
+
+##testing for multicollinearity
+stepwise_M2_Vif <- car::vif(stepwise_M2) #
+stepwise_M2_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+stepwise_M2Exp <- stepwise_M2
+stepwise_M2Exp$coefficients <- exp(stepwise_M2Exp$coefficients)
+stepwise_M2Exp
+
+# pseudo R-squared
+stepwise_R2 <- (1-(stepwise_M2$deviance)/(stepwise_M2$null.deviance))
+stepwise_R2 <- round(stepwise_R2,2)
+stepwise_R2
+
+##Model All
+V1 <- stargazer(stepwise_M2,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", stepwise_R2)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/fs_M2_fe.htm")
+
+```
+
+
+
+
+
+##Shore sample
+
+#### SVSS test
+```{r include = FALSE}
+outcome <- "felev"
+predictors <- c("TotPop_W_10k",
+                   "PopDense_W_1k",
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotOccHU_W_10k",
+                   "TotHU_W_10k",
+                   "RepRate",
+                   "mrp_ideology",
+                   "fOwnOcc",
+                   "fRentOcc",
+                   "fS2ndHome", 
+                   "TaxBaseEst_1B_W",
+                   #"ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "NFIP_AllClaimsAdj_YOLZ", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane")
+
+
+results_zs <- ssvs(data=DNZV1_ZCTAshore,
+     y=outcome,
+     x=predictors,
+     continuous = FALSE,
+     inprob=0.5,
+     runs=1000,
+     burn=500)
+
+plot(results_zs)
+
+```
+
+
+#### Logistic model comparing Disertation with SVSS predictors 
+```{r include = FALSE}
+##SVSS_M1: All + Baseline (w year FEs)
+Dis_M1 <- glm(felev~
+                MHVadj_W_100k +
+                fWhite +
+                RepRate +
+                #ZCTA_shore +
+                count_fema_sfha_W_1k +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                TotPop_W_10k +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1_ZCTAshore,family=binomial(link = "logit"))
+summary(Dis_M1)
+
+##testing for overdispersion
+deviance(Dis_M1)/df.residual(Dis_M1) #0.87
+
+##testing for multicollinearity
+Dis_M1_Vif <- car::vif(Dis_M1) #
+Dis_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+Dis_M1Exp <- Dis_M1
+Dis_M1Exp$coefficients <- exp(Dis_M1Exp$coefficients)
+Dis_M1Exp
+
+# pseudo R-squared
+Dis_R1 <- (1-(Dis_M1$deviance)/(Dis_M1$null.deviance))
+Dis_R1 <- round(Dis_R1,2)
+Dis_R1
+
+
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1)
+SVSS_M1 <- glm(felev~
+            count_fema_sfha_W_1k +
+            Hurricane +
+            MHVadj_W_100k +
+            mrp_ideology +
+            #ZCTA_shore +
+            #MHIadj_W_10k +
+            #fWhite +
+            #TaxBaseEst_1B_W +
+            TotPop_W_10k +
+            NFIP_ICCadj_YOLZ_W_1M +
+            #fWhite+
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_ZCTAshore,family=binomial(link = "logit"))
+summary(SVSS_M1)
+
+##testing for overdispersion
+deviance(SVSS_M1)/df.residual(SVSS_M1) #
+
+##testing for multicollinearity
+SVSS_M1_Vif <- car::vif(SVSS_M1) #
+SVSS_M1_Vif
+
+#exponentiating coeff for ofyDeclareds ratios
+SVSS_M1Exp <- SVSS_M1
+SVSS_M1Exp$coefficients <- exp(SVSS_M1Exp$coefficients)
+SVSS_M1Exp
+
+# pseudo R-squared
+SVSS_R1 <- (1-(SVSS_M1$deviance)/(SVSS_M1$null.deviance))
+SVSS_R1 <- round(SVSS_R1,2)
+SVSS_R1
+
+##Model All
+V1 <- stargazer(Dis_M1, SVSS_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes", "Yes"),
+                                 c("Year FE", "Yes", "Yes"),
+                                 c("Pseudo $R2$", Dis_R1, SVSS_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/zs_dis_svss_fe.htm")
+
+```

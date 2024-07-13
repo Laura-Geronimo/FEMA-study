@@ -1,0 +1,827 @@
+
+
+---
+title: "Supplementary Information: Descriptive Statistics"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    theme: united
+
+---
+
+## Notes
+ok to run 07/13/2024
+Consider repeating for shoreline sample and certain hurricanes
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+getwd()
+
+##Libraries
+library(dplyr)
+library(stringr)
+library(Hmisc)
+library(tidycensus)
+library(corrplot)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+library(viridis)
+
+library(forcats)
+library(boot)
+library(lmtest)
+library(sandwich)
+library(ggpubr)
+
+options (scipen=999)
+
+#importing data
+DNZV1 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZ_V1.csv')
+
+names(DNZV1)
+DNZV1 <- DNZV1[,c(-1)]
+
+#creating subsets
+DNZV1_lessMix <- subset(DNZV1, felev==0 | felev==1)
+DNZV1_After1993 <- subset(DNZV1, fyDeclared >1993)
+DNZV1_ZCTA_shore <- subset(DNZV1, ZCTA_shore==1) 
+
+DNZV1_Katrina <- subset(DNZV1, declarationTitle %like% "katrina") 
+DNZV1_Sandy <- subset(DNZV1, declarationTitle %like% "sandy") 
+DNZV1_Mix <- subset(DNZV1, felev>0 & felev<1)
+
+```
+
+
+## Descriptive Statistics: 
+### Full Sample 
+```{r include=FALSE}
+#Full Set: descriptive statistics
+names(DNZV1)
+range(DNZV1$DD)
+table(DNZV1$incidentTypeB)
+sum(DNZV1$TotalProps)
+sum(DNZV1$Elev)
+sum(DNZV1$Acqui)
+DS_all <- DNZV1[,c("felev",
+                   "Elev", "Acqui",
+                   "TotPop_W_10k",
+                   "PopDense_W_1k", #NEW
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotHU_W_10k",  #NEW
+                   "TotOccHU_W_10k", 
+                   "RepRate",
+                   "mrp_ideology", #NEW
+                   "fOwnOcc",
+                   "fRentOcc", #NEW
+                   "fS2ndHome",  #NEW
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "count_fs_risk_500_year00_W_1k", #NEW
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "NFIP_AllClaimsAdj_YOLZ_W_10M", #NEW
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "fyDeclared")]
+
+names(DS_all)
+str(DS_all)
+describe(DS_all)
+
+# Ensure all relevant columns are numeric
+#DS_all <- data.frame(lapply(DS_all, function(x) as.numeric(as.character(x))))
+
+# Compute descriptive statistics
+DS_all2 <- stat.desc(DS_all, basic=TRUE, options(scipen=100))
+
+
+
+DS_all3<-DS_all2[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+new_names <- c(
+  "felev" = "felev",
+  "Elev" = "Total Elevations",
+  "Acqui" = "Total Acquisitions",
+  "TotPop_W_10k" = "Total Pop. 10k (W)",
+  "PopDense_W_1k" = "Pop. Dense 1k (W)",
+  "fWhite" = "Fraction White",
+  "fBlack" = "Fraction Black",
+  "fHisp" = "Fraction Hispanic",
+  "RepRate" = "County Republican Vote Rate",
+  "mrp_ideology" ="mrp_ideology",
+  "MHIadj_W_10k" = "Median HH Income 10k (W)",
+  "MHVadj_W_100k" = "Median Home Value 100k (W)",
+  "TotHU_W_10k" = "Total HU 10k (W)",
+  "TotOccHU_W_10k" = "Total Occ. HU 10k (W)",
+  "fOwnOcc" = "Fraction HUs Owner Occ.",
+  "fRentOcc" = "Fraction HUs Renter Occ.",
+  "fS2ndHome" = "Fraction HUs 2nd Home",
+  "TaxBaseEst_1B_W" = "Est. Tax Base 1B (W)",
+  "ZCTA_shore" = "Shoreline ZCTA",
+  "count_fema_sfha_W_1k" = "Count of HU in FEMA SFHA 1k (W)",
+  "count_fs_risk_500_year00_W_1k" = "FS Count of HU in 500yr risk 1k (W)",
+  "NFIP_ICCadj_YOLZ_W_1M" = "NFIP ICC Est. $1M (W)",
+  "NFIP_AllClaimsAdj_YOLZ_W_10M" = "NFIP All Claims Est. $10M (W)",
+  "IHP_fldDamAmountAdjDNZ_W_10M" = "IHP Damage Est. $10M (W)",
+  "Hurricane"="Hurricane",
+  "fyDeclared"= "fyDeclared"
+)
+
+# Rename columns
+names(DS_all3) <- new_names[names(DS_all3)]
+
+names(DS_all3)
+```
+
+```{r echo=FALSE}
+knitr::kable(DS_all3,
+            caption="Descriptive Statistics")
+
+```
+
+### Scatterplot Matrix: Full Sample
+```{r include=FALSE}
+names(DS_all3)
+DNZV1_scatter <- DS_all 
+
+```
+
+```{r include=FALSE}
+
+#scatterplotMatrix(DNZV1_scatter, spread=FALSE, smoother.args=list(lty=2), main="Scatter Plot Matrix")
+names(DS_all)
+plot(DS_all$felev, DS_all$TotPop_W_10k)
+plot(DS_all$felev, DS_all$PopDense_W_1k)
+plot(DS_all$felev, DS_all$fWhite)
+plot(DS_all$felev, DS_all$fBlack)
+plot(DS_all$felev, DS_all$fHisp)
+plot(DS_all$felev, DS_all$MHIadj_W_10k)
+plot(DS_all$felev, DS_all$MHVadj_W_100k)
+plot(DS_all$felev, DS_all$TotHU_W_10k)
+plot(DS_all$felev, DS_all$TotOccHU_W_10k)
+plot(DS_all$felev, DS_all$RepRate)
+plot(DS_all$felev, DS_all$mrp_ideology)
+plot(DS_all$felev, DS_all$fOwnOcc)
+plot(DS_all$felev, DS_all$fRentOcc)
+plot(DS_all$felev, DS_all$fS2ndHome)
+plot(DS_all$felev, DS_all$TaxBaseEst_1B_W)
+plot(DS_all$felev, DS_all$ZCTA_shore)
+plot(DS_all$felev, DS_all$count_fema_sfha_W_1k)
+plot(DS_all$felev, DS_all$count_fs_risk_500_year00_W_1k)
+plot(DS_all$felev, DS_all$NFIP_ICCadj_YOLZ_W_1M)
+plot(DS_all$felev, DS_all$NFIP_AllClaimsAdj_YOLZ_W_10M)
+plot(DS_all$felev, DS_all$IHP_fldDamAmountAdjDNZ_W_10M)
+plot(DS_all$felev, DS_all$Hurricane)
+
+
+```
+
+### Descriptive Statistics: Subsets of interest
+#### Descriptive Statistics: Full Sample
+```{r include=FALSE}
+
+DS_3 <- DS_all
+
+DS_3b  <- stat.desc(DS_3 , basic=TRUE, options(scipen=100))
+
+DS_3c <- DS_3b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_3c) <- new_names[names(DS_3c)]
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_3c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: DNZs with only acquisitions, no elevations (f_elev < 0.99) (n=4216 DNZs)
+DS_4 <- subset(DS_all, felev < 0.01)
+
+DS_4b  <- stat.desc(DS_4 , basic=TRUE, options(scipen=100))
+
+DS_4c <- DS_4b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_4c) <- new_names[names(DS_4c)]
+```
+
+```{r include=FALSE}
+knitr::kable(DS_4c,
+            caption="Descriptive Statistics")
+
+```
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: DNZs with only elevations and no acquisitions (f_elev >= 0.99) (n=1062 DNZs)
+
+DS_5 <- subset(DS_all, felev >= 0.99)
+
+DS_5b  <- stat.desc(DS_5 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_5c <- DS_5b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_5c) <- new_names[names(DS_5c)]
+```
+
+```{r include=FALSE}
+knitr::kable(DS_5c,
+            caption="Descriptive Statistics")
+
+```
+
+
+```{r include=FALSE}
+
+#### Descriptive Statistics: DNZs with at least 1 elevation (Elev > 0) (n=1445 DNZs)
+
+DS_6 <- subset(DS_all, Elev > 0) #1445
+
+DS_6b  <- stat.desc(DS_6 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_6c <- DS_6b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_6c) <- new_names[names(DS_6c)]
+
+```
+
+```{r include=FALSE}
+knitr::kable(DS_6c,
+            caption="Descriptive Statistics")
+
+```
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: DNZs with at least 1 Acquisition (Acqui > 0) (n=4596 DNZs)
+DS_7 <- subset(DS_all, Acqui > 0) 
+
+DS_7b  <- stat.desc(DS_7 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_7c <- DS_7b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_7c) <- new_names[names(DS_7c)]
+
+```
+
+```{r include=FALSE}
+knitr::kable(DS_7c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: DNZs with a 'mix' of elevations and acquisitions (0.99 > f_elev > 0.01) (n=380 DNZs) 
+DS_8 <- subset(DS_all, felev > 0.01 & 
+                        felev < 0.99)
+
+DS_8b  <- stat.desc(DS_8 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_8c <- DS_8b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_8c)<- new_names[names(DS_8c)]
+```
+
+```{r include=FALSE}
+knitr::kable(DS_8c,
+            caption="Descriptive Statistics")
+
+```
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: 'Less Mix' Sample: All DNZs except those with a 'mix' of elevations and acquisitions (0.99 > f_elev > 0.01) (n=5275 DNZs) 
+
+DS_9 <- subset(DS_all, felev==0 | felev==1)
+
+DS_9b  <- stat.desc(DS_9 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_9c <- DS_9b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_9c)<- new_names[names(DS_9c)]
+```
+
+```{r include =FALSE}
+knitr::kable(DS_9c,
+            caption="Descriptive Statistics")
+
+```
+
+
+```{r include=FALSE}
+#### Descriptive Statistics: 'After 1993' Sample (n=5394 DNZs) 
+DS_10 <- subset(DS_all, fyDeclared >1993)
+
+
+DS_10b  <- stat.desc(DS_10 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_10c <- DS_10b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_10c) <- new_names[names(DS_10c)]
+```
+
+```{r include=FALSE}
+knitr::kable(DS_10c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+#### Descriptive Statistics: Shoreline ZCTA Sample (n=1328 DNZs) 
+```{r include=FALSE}
+
+DS_12 <- subset(DS_all, ZCTA_shore ==1)
+
+
+DS_12b  <- stat.desc(DS_12 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_12c <- DS_12b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_12c)<- new_names[names(DS_12c)]
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_12c,
+            caption="Descriptive Statistics")
+
+```
+
+
+#### Descriptive Statistics: 'Sandy' Sample (n=145 DNZs) 
+```{r include=FALSE}
+
+DS_13 <- subset(DNZV1, declarationTitle %like% "sandy")
+
+DS_13 <- DS_13[,c("felev",
+                   "Elev", "Acqui",
+                   "TotPop_W_10k",
+                   "PopDense_W_1k", #NEW
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotHU_W_10k",  #NEW
+                   "TotOccHU_W_10k", 
+                   "RepRate",
+                   "mrp_ideology", #NEW
+                   "fOwnOcc",
+                   "fRentOcc", #NEW
+                   "fS2ndHome",  #NEW
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "count_fs_risk_500_year00_W_1k", #NEW
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "NFIP_AllClaimsAdj_YOLZ_W_10M", #NEW
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "fyDeclared")]
+
+
+DS_13b  <- stat.desc(DS_13 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_13c <- DS_13b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_13c)<- new_names[names(DS_13c)]
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_13c,
+            caption="Descriptive Statistics")
+
+```
+
+#### Descriptive Statistics: 'Katrina' Sample (n=153 DNZs) 
+```{r include=FALSE}
+
+DS_14 <- subset(DNZV1, declarationTitle %like% "katrina")
+
+
+DS_14 <- DS_14[,c("felev",
+                   "Elev", "Acqui",
+                   "TotPop_W_10k",
+                   "PopDense_W_1k", 
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotHU_W_10k",  
+                   "TotOccHU_W_10k", 
+                   "RepRate",
+                   "mrp_ideology", 
+                   "fOwnOcc",
+                   "fRentOcc", 
+                   "fS2ndHome",  
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "count_fs_risk_500_year00_W_1k", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "NFIP_AllClaimsAdj_YOLZ_W_10M", 
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "fyDeclared")]
+
+DS_14b  <- stat.desc(DS_14 , basic=TRUE, 
+                     options(scipen=100))
+
+DS_14c <- DS_14b[c("min",
+                   "max",
+                   "range",
+                   "median",
+                   "mean",
+                   "std.dev"),]
+
+names(DS_14c)<- new_names[names(DS_14c)]
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+knitr::kable(DS_14c,
+            caption="Descriptive Statistics")
+
+```
+
+
+
+## Driving Events
+```{r include=FALSE}
+#preparing data for analysis
+
+Elev <- subset(DNZV1, Elev > 0)
+Acqui <- subset(DNZV1, Acqui >0)
+
+DNZV1$AtLeast1Elev <- 0
+DNZV1$AtLeast1Elev[DNZV1$Elev>0] <-1 
+table(DNZV1$AtLeast1Elev)
+
+DNZV1$AtLeast1Acqui <- 0
+DNZV1$AtLeast1Acqui[DNZV1$Acqui>0] <-1 
+table(DNZV1$AtLeast1Acqui) 
+
+Mixed <- subset(DNZV1, felev >0 & felev <1) #
+sum(Mixed$Elev)
+sum(Mixed$Acqui)
+
+#created namedStorm column
+names_list <- c("alex", "andrew", "barry", "bob", "bonnie", "bret", "charley", "claudette", 
+                "delta", "dennis", "dorian", "earl", "emily", "erin", "florence", "floyd", 
+                "fran", "frances", "georges", "gustav", "harvey", "hermine", "ian", "ida", 
+                "ike", "irma", "isaac", "isabel", "isaias", "ivan", "jeanne", "katrina", 
+                "laura", "lili", "matthew", "michael", "nate", "nicole", "opal", "ophelia", 
+                "rita", "sally", "sandy", "wilma", "zeta")
+
+DNZV1$namedStorm <- NA
+for (name in names_list) {
+  DNZV1$namedStorm[DNZV1$declarationTitle %like% name] <- name
+}
+
+table(DNZV1$namedStorm)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+aggElevNamedStorm <- aggregate(list(DNZV1$AtLeast1Elev, DNZV1$Elev), by = list(DNZV1$namedStorm), FUN=sum)
+colnames(aggElevNamedStorm) <- c("NamedStorm","DNZs With At Least 1 Elevation","Count of Elevations")
+
+
+aggAcquiNamedStorm <- aggregate(list(DNZV1$AtLeast1Acqui, DNZV1$Acqui), by = list(DNZV1$namedStorm), FUN=sum)
+colnames(aggAcquiNamedStorm) <- c("NamedStorm","DNZs With At Least 1 Acquisition","Count of Acquisitions")
+
+
+PropsByNamedStorm <-  aggregate(list(DNZV1$TotalProps, DNZV1$Acqui, DNZV1$Elev), by = list(DNZV1$namedStorm), FUN=sum)
+colnames(PropsByNamedStorm) <- c("NamedStorm","TotalProps", "Acqui","Elev")
+
+
+```
+
+
+```{r include=FALSE}
+
+knitr::kable(aggElevNamedStorm[order(aggElevNamedStorm$`Count of Elevations`, decreasing = TRUE),])
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data= aggElevNamedStorm %>% slice_max(`Count of Elevations`, n = 10), #This pipe allows you to slice the top 10 data without having to subset it
+       aes(fct_reorder(NamedStorm, `Count of Elevations`),  #this part orders the columns
+           `Count of Elevations`))+
+  geom_bar(stat="identity") +
+  geom_text(aes(label=`Count of Elevations`, vjust=-0.5))+
+  labs(y="Count of Elevations", x="",
+               title="Count of HMGP Elevations by Named Storm (1989-2022): Top 10")+
+  scale_y_continuous(limits=c(0,3000), labels=scales::comma)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r include=FALSE}
+
+knitr::kable(aggAcquiNamedStorm[order(aggAcquiNamedStorm$`Count of Acquisitions`, decreasing = TRUE),])
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(data= aggAcquiNamedStorm %>% slice_max(`Count of Acquisitions`, n = 10), #This pipe allows you to slice the top 10 data without having to subset it
+       aes(fct_reorder(NamedStorm, `Count of Acquisitions`),  #this part orders the columns
+           `Count of Acquisitions`))+
+  geom_bar(stat="identity") +
+    geom_text(aes(label=`Count of Acquisitions`, vjust=-0.5))+
+  labs(y="Count of Acquisitions", x="",
+               title="Count of HMGP Acquisitions by Named Storm (1989-2022): Top 10")+
+  scale_y_continuous(limits=c(0,3000), labels=scales::comma)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
+
+
+## Full sample analysis
+
+### Correlation Matrices
+
+```{r include=FALSE}
+cor_fullSample <- cor(DS_all[,sapply(DS_all, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor(cor_fullSample),method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.50, 
+         tl.cex=0.50, tl.col="black")
+```
+
+
+
+### Univariate analysis 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Chi-Square Test for categorical variables
+chisq.test(table(DNZV1$felev, DNZV1$Hurricane)) #Sig***
+chisq.test(table(DNZV1$felev, DNZV1$ZCTA_shore)) #Sig***
+
+# ANOVA for continuous variables
+summary(aov(felev ~ PopDense_W_1k, data = DNZV1)) #sig***
+summary(aov(felev ~ fWhite, data = DNZV1)) #sig***
+summary(aov(felev ~ fBlack, data = DNZV1)) #sig***
+summary(aov(felev ~ MHIadj_W_10k, data = DNZV1)) #sig***
+summary(aov(felev ~ MHVadj_W_100k, data = DNZV1)) #sig***
+summary(aov(felev ~ fS2ndHome, data = DNZV1)) #sig ***
+summary(aov(felev ~ TaxBaseEst_1B_W, data = DNZV1)) #sig ***
+
+summary(aov(felev ~ NFIP_AllClaimsAdj_YOLZ_W_10M, data = DNZV1)) #sig ***
+summary(aov(felev ~ NFIP_ICCadj_YOLZ_W_1M, data = DNZV1)) #sig ***
+summary(aov(felev ~ IHP_fldDamAmountAdjDNZ_W_10M, data = DNZV1)) #sig ***
+summary(aov(felev ~ count_fs_risk_500_year00_W_1k, data = DNZV1)) #sig ***
+summary(aov(felev ~ count_fema_sfha_W_1k, data = DNZV1)) #sig ***
+
+summary(aov(felev ~ TotHU_W_10k, data = DNZV1)) #low sig**
+
+summary(aov(felev ~ mrp_ideology, data = DNZV1)) #low sig *
+summary(aov(felev ~ fHisp, data = DNZV1)) #low sig*
+summary(aov(felev ~ fOwnOcc, data = DNZV1)) #low sig *
+summary(aov(felev ~ fRentOcc, data = DNZV1)) #low sig *
+
+summary(aov(felev ~ TotPop_W_10k, data = DNZV1)) #not sig
+summary(aov(felev ~ RepRate, data = DNZV1)) #not sig
+summary(aov(felev ~ TotOccHU_W_10k, data = DNZV1)) #Not sig
+
+```
+
+
+### Mean felev by deciles
+
+##### Creating Deciles
+```{r include = FALSE}
+#using non-winsorized vars:
+DNZV1$TotPop_10k <- DNZV1$TotPop / 10000
+DNZV1$PopDense_1k <- DNZV1$PopDenseSqMile / 1000
+DNZV1$MHIadj_10k <- DNZV1$MHIadj / 10000
+#MHVadj_100k
+DNZV1$TotHU_10k <- DNZV1$TotHU / 10000
+DNZV1$TotOccHU_10k <- DNZV1$TotOccHU / 10000
+DNZV1$count_fema_sfha_1k <- DNZV1$count_fema_sfha / 1000
+DNZV1$count_fs_risk_500_year00_1k <- DNZV1$count_fs_risk_500_year00 / 1000
+
+DNZV1$NFIP_ICCadj_YOLZ_1M <- DNZV1$NFIP_ICCadj_YOLZ / 1000000
+DNZV1$NFIP_AllClaimsAdj_YOLZ_10M <- DNZV1$NFIP_AllClaimsAdj_YOLZ / 10000000
+DNZV1$IHP_fldDamAmountAdjDNZ_10M <- DNZV1$IHP_fldDamAmountAdjDNZ /10000000
+
+# Function to create deciles and transform them into factors
+create_deciles <- function(df, column_name) {
+  if (is.null(df[[column_name]])) {
+    stop(paste("Column", column_name, "is NULL. Please provide a valid column."))
+  }
+  
+  df[[paste0(column_name, "_dec")]] <- ntile(df[[column_name]], 10)
+  df[[paste0(column_name, "_dec")]] <- as.factor(df[[paste0(column_name, "_dec")]])
+  print(table(df[[paste0(column_name, "_dec")]]))
+  return(df)
+}
+
+
+# List of columns to create deciles for
+columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
+
+# Apply the function to each column
+for (col in columns) {
+  DNZV1 <- create_deciles(DNZV1, col)
+}
+
+# Optional: Display summaries if needed
+tapply(DNZV1$MHVadj_100k, DNZV1$MHVadj_100k_dec, summary)
+tapply(DNZV1$felev, DNZV1$MHVadj_100k_dec, summary)
+
+```
+
+##### Mean felev by deciles
+```{r include = FALSE}
+library(ggpubr)
+
+# Function to create ggerrorplot with common settings
+create_error_plot <- function(data, x_var, y_var, x_label) {
+  ggerrorplot(data = data, x = x_var, y = y_var, 
+              desc_stat = "mean_se",
+              error.plot = "errorbar",
+              add = "mean") +
+    ylab("Mean felev") +
+    xlab(x_label) +
+    scale_y_continuous(limits = c(0, 1))
+}
+
+# Create each plot using the function
+M1 <- create_error_plot(DNZV1, "MHVadj_100k_dec", "felev", "Deciles: Median Home Value (100k)")
+
+M1 <- create_error_plot(DNZV1, "TotPop_10k_dec", "felev", "Dec: Tot. Pop. (10k)")
+M2 <- create_error_plot(DNZV1, "PopDense_1k_dec", "felev", "Dec: Pop. Dense (1k)")
+M3 <- create_error_plot(DNZV1, "fWhite_dec", "felev", "Dec: Fraction White")
+M4 <- create_error_plot(DNZV1, "fBlack_dec", "felev", "Dec: Fraction Black")
+M5 <- create_error_plot(DNZV1, "fHisp_dec", "felev", "Dec: Fraction Hispanic")
+M6 <- create_error_plot(DNZV1, "MHIadj_10k_dec", "felev", "Dec: MHI (10k)")
+M7 <- create_error_plot(DNZV1, "MHVadj_100k_dec", "felev", "Dec: MHV (100k)")
+M8 <- create_error_plot(DNZV1, "TotHU_10k_dec", "felev", "Dec: Tot. HU (10k)")
+
+M9 <- create_error_plot(DNZV1, "TotOccHU_10k_dec", "felev", "Dec: Tot. Occ. HU (10k)")
+M10 <- create_error_plot(DNZV1, "RepRate_dec", "felev", "Dec: County Republican Vote Rate")
+M11 <- create_error_plot(DNZV1, "mrp_ideology_dec", "felev", "Dec: MPR Ideology")
+M12 <- create_error_plot(DNZV1, "fOwnOcc_dec", "felev", "Dec: Fraction HUs. Owner Occ.")
+M13 <- create_error_plot(DNZV1, "fRentOcc_dec", "felev", "Dec: Fraction HUs. Renter Occ.")
+M14 <- create_error_plot(DNZV1, "fS2ndHome_dec", "felev", "Dec: Fraction HUs. 2nd Home")
+M15 <- create_error_plot(DNZV1, "TaxBaseEst_1B_dec", "felev", "Dec: Est. Tax Base (1B)")
+M16 <- create_error_plot(DNZV1, "ZCTA_shore_dec", "felev", "Dec: Shoreline ZCTA")
+M17 <- create_error_plot(DNZV1, "count_fema_sfha_1k_dec", "felev", "Dec: Count HUs in FEMA SFHA (1k)")
+M18 <- create_error_plot(DNZV1, "count_fs_risk_500_year00_1k_dec", "felev", "Dec: FS Est. Count HUs in 500yr floodplain (1k)")
+M19 <- create_error_plot(DNZV1, "NFIP_ICCadj_YOLZ_1M_dec", "felev", "Dec: NFIP ICC YOLZ (1M)")
+M20 <- create_error_plot(DNZV1, "IHP_fldDamAmountAdjDNZ_10M_dec", "felev", "Dec: IHP Flood Dmg (10M)")
+M21 <- create_error_plot(DNZV1, "Hurricane_dec", "felev", "Dec: Hurricane")
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,M13,M14,M15,M16,M17,M18,M19,M20,M21, ncol=3)
+
+```
+
+
+
+
+### Logistic regression of DV against continuous IVs 
+Next we explore visualizations of logistic regressions of the DV against the IVs
+
+
+#### logit plots
+```{r include=FALSE}
+#Logistic plots
+# Function to create the scatter plots with smoothing
+create_scatter_plot <- function(data, x_var, y_var, x_label) {
+  ggplot(data = data, aes(x = {{ x_var }}, y = {{ y_var }})) +
+    geom_point(alpha = 0.10) +
+    stat_smooth(method = "glm", method.args = list(family = binomial), col = "magenta") +
+    ylab("felev") +
+    xlab(x_label) +
+    theme(text = element_text(size = 8)) +
+    scale_y_continuous(breaks = c(1, 0),
+                       labels = c("1: All Elevations", "0: All Buyouts"))
+}
+
+# Create each plot using the function
+L1 <- create_scatter_plot(DNZV1, TotPop_10k, felev, "Tot. Pop. (10k)")
+L2 <- create_scatter_plot(DNZV1, PopDense_1k, felev, "Pop. Dense (1k)")
+L3 <- create_scatter_plot(DNZV1, fWhite, felev, "Fraction White")
+L4 <- create_scatter_plot(DNZV1, fBlack, felev, "Fraction Black")
+L5 <- create_scatter_plot(DNZV1, fHisp, felev, "Fraction Hispanic")
+L6 <- create_scatter_plot(DNZV1, MHIadj_10k, felev, "MHI (10k)")
+L7 <- create_scatter_plot(DNZV1, MHVadj_100k, felev, "MHV (100k)")
+L8 <- create_scatter_plot(DNZV1, TotHU_10k, felev, "Tot. HU (10k)")
+L9 <- create_scatter_plot(DNZV1, TotOccHU_10k, felev, "Tot. Occ. HU (10k)")
+L10 <- create_scatter_plot(DNZV1, RepRate, felev, "County Republican Vote Rate")
+L11 <- create_scatter_plot(DNZV1, mrp_ideology, felev, "MPR Ideology")
+L12 <- create_scatter_plot(DNZV1, fOwnOcc, felev, "Fraction HUs. Owner Occ.")
+L13 <- create_scatter_plot(DNZV1, fRentOcc, felev, "Fraction HUs. Renter Occ.")
+L14 <- create_scatter_plot(DNZV1, fS2ndHome, felev, "Fraction HUs. 2nd Home")
+L15 <- create_scatter_plot(DNZV1, TaxBaseEst_1B, felev, "Est. Tax Base (1B)")
+L16 <- create_scatter_plot(DNZV1, ZCTA_shore, felev, "Shoreline ZCTA")
+L17 <- create_scatter_plot(DNZV1, count_fema_sfha_1k, felev, "Count HUs in FEMA SFHA (1k)")
+L18 <- create_scatter_plot(DNZV1, count_fs_risk_500_year00_1k, felev, "FS Est. Count HUs in 500yr floodplain (1k)")
+L19 <- create_scatter_plot(DNZV1, NFIP_ICCadj_YOLZ_1M, felev, "NFIP ICC YOLZ (1M)")
+L20 <- create_scatter_plot(DNZV1, IHP_fldDamAmountAdjDNZ_10M, felev, "IHP Flood Dmg (10M)")
+L21 <- create_scatter_plot(DNZV1, Hurricane, felev, "Hurricane")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(gridExtra)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L16,L17,L18,L19,L20,L21, ncol=3)
+
+```
