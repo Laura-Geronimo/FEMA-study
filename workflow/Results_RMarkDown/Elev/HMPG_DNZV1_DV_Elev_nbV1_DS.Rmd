@@ -1,0 +1,517 @@
+
+
+---
+title: "Supplementary Information: Descriptive Statistics"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    toc_float: true
+    number_sections: true
+    theme: "default"
+
+---
+
+## Notes
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+getwd()
+
+##Libraries
+library(dplyr)
+library(stringr)
+library(Hmisc)
+library(tidycensus)
+library(corrplot)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+library(viridis)
+
+library(forcats)
+library(boot)
+library(lmtest)
+library(sandwich)
+library(ggpubr)
+
+options (scipen=999)
+
+#importing data
+DNZV1 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZ_V1.csv')
+
+names(DNZV1)
+DNZV1 <- DNZV1[,c(-1)]
+DNZV1_shore <- subset(DNZV1, ZCTA_shore==1)
+
+#Elevation subsets
+DNZV1E <- subset(DNZV1, Elev>0)
+DNZV1E_shore <- subset(DNZV1E, ZCTA_shore==1)
+DNZV1E_sandy <- subset(DNZV1E, namedStorm=="sandy")
+DNZV1E_hurricane <- DNZV1E %>%
+  filter(!is.na(HurricaneName))
+
+#Acquisition subsets
+DNZV1A <- subset(DNZV1, Acqui>0)
+DNZV1A_shore <- subset(DNZV1A, ZCTA_shore==1)
+DNZV1A_sandy <- subset(DNZV1A, namedStorm=="sandy")
+
+```
+
+#All DNZs
+##Elevations
+###State level analysis
+####Mean Elev by fWhite_dec by state
+```{r include= FALSE}
+# Calculate deciles of fWhite for each p2state
+DNZV1E <- DNZV1E %>%
+  group_by(p2state) %>%
+  mutate(fWhite_decile = ntile(fWhite, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_elev_data <- DNZV1E %>%
+  group_by(p2state, fWhite_decile) %>%
+  summarise(
+    mean_Elev = mean(Elev, na.rm = TRUE),
+    sem_Elev = sd(Elev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_elev_data, aes(x = fWhite_decile, y = mean_Elev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_Elev - sem_Elev, ymax = mean_Elev + sem_Elev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean Elev by Deciles of fWhite for each p2State",
+       x = "Deciles of fWhite",
+       y = "Mean Elev") +
+  theme_minimal()
+```
+
+####Mean Elev by MHVadj_100k_dec by state
+```{r include= FALSE}
+# Calculate deciles of MHVadj_100k for each p2state
+DNZV1E <- DNZV1E %>%
+  group_by(p2state) %>%
+  mutate(MHVadj_100k_decile = ntile(MHVadj_100k, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_elev_data <- DNZV1E %>%
+  group_by(p2state, MHVadj_100k_decile) %>%
+  summarise(
+    mean_Elev = mean(Elev, na.rm = TRUE),
+    sem_Elev = sd(Elev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_elev_data, aes(x = MHVadj_100k_decile, y = mean_Elev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_Elev - sem_Elev, ymax = mean_Elev + sem_Elev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean Elev by Deciles of MHVadj_100k for each State",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Elev") +
+  theme_minimal()
+```
+
+###Hurricane level analysis
+####Mean Elev by fWhite_dec by Hurricane
+```{r include= FALSE}
+# Calculate deciles of fWhite for each hurricane
+DNZV1E_hurricane <- DNZV1E_hurricane %>%
+  group_by(HurricaneName) %>%
+  mutate(fWhite_decile = ntile(fWhite, 10))
+
+# Compute mean of Elev within each decile for each HurricaneName
+mean_elev_data <- DNZV1E_hurricane %>%
+  group_by(HurricaneName, fWhite_decile) %>%
+  summarise(
+    mean_Elev = mean(Elev, na.rm = TRUE),
+    sem_Elev = sd(Elev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_elev_data, aes(x = fWhite_decile, y = mean_Elev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_Elev - sem_Elev, ymax = mean_Elev + sem_Elev), width = 0.2) +
+  facet_wrap(~ HurricaneName) +
+  labs(title = "Mean Elev by Deciles of fWhite for each HurricaneName",
+       x = "Deciles of fWhite",
+       y = "Mean Elev") +
+  theme_minimal()
+```
+
+####Mean Elev by MHVadj_100k_dec by state
+```{r include= FALSE}
+# Calculate deciles of MHVadj_100k for each HurricaneName
+DNZV1E_hurricane <- DNZV1E_hurricane %>%
+  group_by(HurricaneName) %>%
+  mutate(MHVadj_100k_decile = ntile(MHVadj_100k, 10))
+
+# Compute mean of Elev within each decile for each HurricaneName
+mean_elev_data <- DNZV1E_hurricane %>%
+  group_by(HurricaneName, MHVadj_100k_decile) %>%
+  summarise(
+    mean_Elev = mean(Elev, na.rm = TRUE),
+    sem_Elev = sd(Elev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_elev_data, aes(x = MHVadj_100k_decile, y = mean_Elev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_Elev - sem_Elev, ymax = mean_Elev + sem_Elev), width = 0.2) +
+  facet_wrap(~ HurricaneName) +
+  labs(title = "Mean Elev by Deciles of MHVadj_100k for each State",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Elev") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+############################
+#ELEVATIONS
+### all DNZs with Elevs
+```{r include= FALSE}
+install.packages("dplyr")
+library(ggplot2)
+library(dplyr)
+
+table(is.na(DNZV1E$Elev))
+
+# Calculate deciles for 'Elev' and 'MHVadj_100k'
+DNZV1E <- DNZV1E %>%
+  mutate(Elev_dec = ntile(Elev, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         fWhite_dec = ntile(fWhite, 10),
+         mrp_ideology_dec = ntile(mrp_ideology, 10))
+names(DNZV1E)
+
+ggplot(DNZV1E, aes(Elev_dec,fWhite_dec), col=Elev_dec)+
+  geom_point()
+
+# Calculate the mean Elev for each decile of MHVadj_100k
+test1 <- aggregate(Elev~MHVadj_100k_dec, data=DNZV1E,  FUN=mean)
+
+test2 <- DNZV1E %>%
+  aggregate(Elev~MHVadj_100k_dec, mean)
+
+library(data.table)
+test3 <- DNZV1E %>%
+  aggregate(Elev, FUN=mean) %>%
+  group_by(ZCTA_shore,MHVadj_100k_dec)
+  
+
+MeanElev_MHV_dec <- DNZV1E %>%
+  group_by(MHVadj_100k_dec) %>%
+  aggregate(Elev, mean)
+
+MeanElev_MHV_dec <- DNZV1E %>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Elev = mean(Elev))
+
+MeanElev_fWhite_dec <- DNZV1E %>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_mrp_ideology_dec <- DNZV1E %>%
+  group_by(mrp_ideology_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanElev_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Elev)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Elev",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Elev") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanElev_fWhite_dec, aes(x = fWhite_dec, y = mean_Elev), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Elev",
+       x = "Deciles of fWhite",
+       y = "Mean Elev") +
+  theme_minimal()
+
+#by mrp_ideology
+ggplot(MeanElev_mrp_ideology_dec, aes(x = mrp_ideology_dec, y = mean_Elev), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of mrp_ideology vs Mean Elev",
+       x = "Deciles of mrp_ideology",
+       y = "Mean Elev") +
+  theme_minimal()
+
+```
+
+
+
+### shore DNZs with Elevs
+```{r include= FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Calculate deciles for 'Elev' and 'MHVadj_100k'
+DNZV1E_shore <- DNZV1E_shore %>%
+  mutate(Elev_dec = ntile(Elev, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         fWhite_dec = ntile(fWhite, 10),
+         mrp_ideology_dec = ntile(mrp_ideology,10))
+
+# Calculate the mean Elev for each decile of MHVadj_100k
+MeanElev_MHV_dec <- DNZV1E_shore %>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_fWhite_dec <- DNZV1E_shore %>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_mrp_ideology_dec <- DNZV1E_shore %>%
+  group_by(mrp_ideology_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanElev_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Elev)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Elev",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Elev") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanElev_fWhite_dec, aes(x = fWhite_dec, y = mean_Elev), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Elev",
+       x = "Deciles of fWhite",
+       y = "Mean Elev") +
+  theme_minimal()
+
+#by mrp_ideology
+ggplot(MeanElev_mrp_ideology_dec, aes(x = mrp_ideology_dec, y = mean_Elev), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of mrp_ideology vs Mean Elev",
+       x = "Deciles of mrp_ideology",
+       y = "Mean Elev") +
+  theme_minimal()
+
+```
+
+
+
+
+### sandy DNZs with Elevs
+```{r include= FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Calculate deciles for 'Elev' and 'MHVadj_100k'
+DNZV1E_sandy <- DNZV1E_sandy %>%
+  mutate(Elev_dec = ntile(Elev, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         NFIP_ICCadj_YOLZ_1M_dec = ntile(NFIP_ICCadj_YOLZ_1M, 10),
+         mrp_ideology_dec = ntile(mrp_ideology,10))
+
+
+# Calculate the mean Elev for each decile of MHVadj_100k
+MeanElev_MHV_dec <- DNZV1E_sandy %>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_fWhite_dec <- DNZV1E_sandy %>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_NFIP_ICC_dec <- DNZV1E_sandy %>%
+  group_by(NFIP_ICCadj_YOLZ_1M_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+MeanElev_mrp_ideology_dec <- DNZV1E_sandy %>%
+  group_by(mrp_ideology_dec) %>%
+  summarize(mean_Elev = mean(Elev, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanElev_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Elev)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Elev",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Elev") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanElev_fWhite_dec, aes(x = fWhite_dec, y = mean_Elev), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Elev",
+       x = "Deciles of fWhite",
+       y = "Mean Elev") +
+  theme_minimal()
+
+```
+
+
+#BUYOUTS
+## all DNZs with Acquis
+```{r include= FALSE}
+library(ggplot2)
+install.packages("dplyr")
+library(dplyr)
+
+# Calculate deciles for 'Acqui' and 'MHVadj_100k'
+DNZV1A<- DNZV1A%>%
+  mutate(Acqui_dec = ntile(Acqui, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         fWhite_dec = ntile(fWhite, 10))
+
+# Calculate the mean Acqui for each decile of MHVadj_100k
+MeanAcqui_MHV_dec <- DNZV1A%>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+MeanAcqui_fWhite_dec <- DNZV1A%>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanAcqui_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Acqui)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Acqui",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanAcqui_fWhite_dec, aes(x = fWhite_dec, y = mean_Acqui), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Acqui",
+       x = "Deciles of fWhite",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+```
+
+
+
+## shore DNZs with Acquis
+```{r include= FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Calculate deciles for 'Acqui' and 'MHVadj_100k'
+DNZV1E_shore <- DNZV1E_shore %>%
+  mutate(Acqui_dec = ntile(Acqui, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         fWhite_dec = ntile(fWhite, 10))
+
+# Calculate the mean Acqui for each decile of MHVadj_100k
+MeanAcqui_MHV_dec <- DNZV1E_shore %>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+MeanAcqui_fWhite_dec <- DNZV1E_shore %>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanAcqui_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Acqui)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Acqui",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanAcqui_fWhite_dec, aes(x = fWhite_dec, y = mean_Acqui), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Acqui",
+       x = "Deciles of fWhite",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+```
+
+
+
+
+## sandy DNZs with Acquis
+```{r include= FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Calculate deciles for 'Acqui' and 'MHVadj_100k'
+DNZV1E_sandy <- DNZV1E_sandy %>%
+  mutate(Acqui_dec = ntile(Acqui, 10),
+         MHVadj_100k_dec = ntile(MHVadj_100k, 10),
+         NFIP_ICCadj_YOLZ_1M_dec = ntile(NFIP_ICCadj_YOLZ_1M, 10))
+
+# Calculate the mean Acqui for each decile of MHVadj_100k
+MeanAcqui_MHV_dec <- DNZV1E_sandy %>%
+  group_by(MHVadj_100k_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+MeanAcqui_fWhite_dec <- DNZV1E_sandy %>%
+  group_by(fWhite_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+MeanAcqui_NFIP_ICC_dec <- DNZV1E_sandy %>%
+  group_by(NFIP_ICCadj_YOLZ_1M_dec) %>%
+  summarize(mean_Acqui = mean(Acqui, na.rm = TRUE), .groups = 'drop')
+
+# Plot the deciles
+#by MHV
+ggplot(MeanAcqui_MHV_dec, aes(x = MHVadj_100k_dec, y = mean_Acqui)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of MHVadj_100k vs Mean Acqui",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+#by fWhite
+ggplot(MeanAcqui_fWhite_dec, aes(x = fWhite_dec, y = mean_Acqui), facet_wrap(ZCTA_shore)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Deciles of fWhite vs Mean Acqui",
+       x = "Deciles of fWhite",
+       y = "Mean Acqui") +
+  theme_minimal()
+
+```

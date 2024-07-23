@@ -7,12 +7,14 @@ output:
   html_document:
     toc: true
     toc_depth: 6
-    theme: united
+    toc_float: true
+    number_sections: true
+    theme: "default"
 
 ---
 
 ## Notes
-ok to run 07/13/2024
+
 Consider repeating for shoreline sample and certain hurricanes
 
 ```{r setup, include=FALSE}
@@ -56,9 +58,14 @@ DNZV1 <- DNZV1[,c(-1)]
 DNZV1_lessMix <- subset(DNZV1, felev==0 | felev==1)
 DNZV1_After1993 <- subset(DNZV1, fyDeclared >1993)
 DNZV1_ZCTA_shore <- subset(DNZV1, ZCTA_shore==1) 
+DNZV1_shore <- subset(DNZV1_shore, p2state!="Illinois" &
+                         p2state!="Indiana" & 
+                         p2state!="Kentucky" & 
+                         p2state!="Ohio" &
+                         p2state!="West Virginia")
 
-DNZV1_Katrina <- subset(DNZV1, declarationTitle %like% "katrina") 
-DNZV1_Sandy <- subset(DNZV1, declarationTitle %like% "sandy") 
+DNZV1_katrina <- subset(DNZV1, declarationTitle %like% "katrina") 
+DNZV1_sandy <- subset(DNZV1, declarationTitle %like% "sandy") 
 DNZV1_Mix <- subset(DNZV1, felev>0 & felev<1)
 
 ```
@@ -70,7 +77,7 @@ DNZV1_Mix <- subset(DNZV1, felev>0 & felev<1)
 #Full Set: descriptive statistics
 names(DNZV1)
 range(DNZV1$DD)
-table(DNZV1$incidentTypeB)
+table(DNZV1$incidentType)
 sum(DNZV1$TotalProps)
 sum(DNZV1$Elev)
 sum(DNZV1$Acqui)
@@ -86,7 +93,7 @@ DS_all <- DNZV1[,c("felev",
                    "TotHU_W_10k",  #NEW
                    "TotOccHU_W_10k", 
                    "RepRate",
-                   "mrp_ideology", #NEW
+                   "mrp_ideology1", #NEW
                    "fOwnOcc",
                    "fRentOcc", #NEW
                    "fS2ndHome",  #NEW
@@ -129,7 +136,7 @@ new_names <- c(
   "fBlack" = "Fraction Black",
   "fHisp" = "Fraction Hispanic",
   "RepRate" = "County Republican Vote Rate",
-  "mrp_ideology" ="mrp_ideology",
+  "mrp_ideology1" ="mrp_ideology1",
   "MHIadj_W_10k" = "Median HH Income 10k (W)",
   "MHVadj_W_100k" = "Median Home Value 100k (W)",
   "TotHU_W_10k" = "Total HU 10k (W)",
@@ -181,7 +188,7 @@ plot(DS_all$felev, DS_all$MHVadj_W_100k)
 plot(DS_all$felev, DS_all$TotHU_W_10k)
 plot(DS_all$felev, DS_all$TotOccHU_W_10k)
 plot(DS_all$felev, DS_all$RepRate)
-plot(DS_all$felev, DS_all$mrp_ideology)
+plot(DS_all$felev, DS_all$mrp_ideology1)
 plot(DS_all$felev, DS_all$fOwnOcc)
 plot(DS_all$felev, DS_all$fRentOcc)
 plot(DS_all$felev, DS_all$fS2ndHome)
@@ -444,7 +451,7 @@ DS_13 <- DS_13[,c("felev",
                    "TotHU_W_10k",  #NEW
                    "TotOccHU_W_10k", 
                    "RepRate",
-                   "mrp_ideology", #NEW
+                   "mrp_ideology1", #NEW
                    "fOwnOcc",
                    "fRentOcc", #NEW
                    "fS2ndHome",  #NEW
@@ -496,7 +503,7 @@ DS_14 <- DS_14[,c("felev",
                    "TotHU_W_10k",  
                    "TotOccHU_W_10k", 
                    "RepRate",
-                   "mrp_ideology", 
+                   "mrp_ideology1", 
                    "fOwnOcc",
                    "fRentOcc", 
                    "fS2ndHome",  
@@ -550,20 +557,7 @@ Mixed <- subset(DNZV1, felev >0 & felev <1) #
 sum(Mixed$Elev)
 sum(Mixed$Acqui)
 
-#created namedStorm column
-names_list <- c("alex", "andrew", "barry", "bob", "bonnie", "bret", "charley", "claudette", 
-                "delta", "dennis", "dorian", "earl", "emily", "erin", "florence", "floyd", 
-                "fran", "frances", "georges", "gustav", "harvey", "hermine", "ian", "ida", 
-                "ike", "irma", "isaac", "isabel", "isaias", "ivan", "jeanne", "katrina", 
-                "laura", "lili", "matthew", "michael", "nate", "nicole", "opal", "ophelia", 
-                "rita", "sally", "sandy", "wilma", "zeta")
 
-DNZV1$namedStorm <- NA
-for (name in names_list) {
-  DNZV1$namedStorm[DNZV1$declarationTitle %like% name] <- name
-}
-
-table(DNZV1$namedStorm)
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -635,7 +629,7 @@ print(cor_fullSample)
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 corrplot(cor_fullSample, method = "circle")
-corrplot(cor(cor_fullSample),method="color", type="lower",
+corrplot(cor_fullSample,method="color", type="lower",
          addCoef.col = "black", 
          number.cex= 0.50, 
          tl.cex=0.50, tl.col="black")
@@ -666,7 +660,7 @@ summary(aov(felev ~ count_fema_sfha_W_1k, data = DNZV1)) #sig ***
 
 summary(aov(felev ~ TotHU_W_10k, data = DNZV1)) #low sig**
 
-summary(aov(felev ~ mrp_ideology, data = DNZV1)) #low sig *
+summary(aov(felev ~ mrp_ideology1, data = DNZV1)) #low sig *
 summary(aov(felev ~ fHisp, data = DNZV1)) #low sig*
 summary(aov(felev ~ fOwnOcc, data = DNZV1)) #low sig *
 summary(aov(felev ~ fRentOcc, data = DNZV1)) #low sig *
@@ -710,7 +704,7 @@ create_deciles <- function(df, column_name) {
 
 
 # List of columns to create deciles for
-columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
+columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology1", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
 
 # Apply the function to each column
 for (col in columns) {
@@ -752,7 +746,7 @@ M8 <- create_error_plot(DNZV1, "TotHU_10k_dec", "felev", "Dec: Tot. HU (10k)")
 
 M9 <- create_error_plot(DNZV1, "TotOccHU_10k_dec", "felev", "Dec: Tot. Occ. HU (10k)")
 M10 <- create_error_plot(DNZV1, "RepRate_dec", "felev", "Dec: County Republican Vote Rate")
-M11 <- create_error_plot(DNZV1, "mrp_ideology_dec", "felev", "Dec: MPR Ideology")
+M11 <- create_error_plot(DNZV1, "mrp_ideology1_dec", "felev", "Dec: MPR Ideology")
 M12 <- create_error_plot(DNZV1, "fOwnOcc_dec", "felev", "Dec: Fraction HUs. Owner Occ.")
 M13 <- create_error_plot(DNZV1, "fRentOcc_dec", "felev", "Dec: Fraction HUs. Renter Occ.")
 M14 <- create_error_plot(DNZV1, "fS2ndHome_dec", "felev", "Dec: Fraction HUs. 2nd Home")
@@ -769,10 +763,12 @@ M21 <- create_error_plot(DNZV1, "Hurricane_dec", "felev", "Dec: Hurricane")
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 plot_widths <- unit(rep(1, 3), "npc")
-plot_heights <- unit(rep(1, 7), "npc")
+plot_heights <- unit(rep(1, 10), "npc")
 
 library(gridExtra)
-grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,M13,M14,M15,M17,M18,M19,M20,M21, ncol=3)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10, ncol=2)
+grid.arrange(M11,M12,M13,M14,M15,M17,M18,M19,M20,M21, ncol=2)
+
 
 ```
 
@@ -809,7 +805,7 @@ L7 <- create_scatter_plot(DNZV1, MHVadj_100k, felev, "MHV (100k)")
 L8 <- create_scatter_plot(DNZV1, TotHU_10k, felev, "Tot. HU (10k)")
 L9 <- create_scatter_plot(DNZV1, TotOccHU_10k, felev, "Tot. Occ. HU (10k)")
 L10 <- create_scatter_plot(DNZV1, RepRate, felev, "County Republican Vote Rate")
-L11 <- create_scatter_plot(DNZV1, mrp_ideology, felev, "MPR Ideology")
+L11 <- create_scatter_plot(DNZV1, mrp_ideology1, felev, "MPR Ideology")
 L12 <- create_scatter_plot(DNZV1, fOwnOcc, felev, "Fraction HUs. Owner Occ.")
 L13 <- create_scatter_plot(DNZV1, fRentOcc, felev, "Fraction HUs. Renter Occ.")
 L14 <- create_scatter_plot(DNZV1, fS2ndHome, felev, "Fraction HUs. 2nd Home")
@@ -828,7 +824,8 @@ plot_widths <- unit(rep(1, 3), "npc")
 plot_heights <- unit(rep(1, 7), "npc")
 
 library(gridExtra)
-grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L16,L17,L18,L19,L20,L21, ncol=3)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,ncol=2)
+grid.arrange(L11,L12,L13,L14,L15,L16,L17,L18,L19,L20,L21, ncol=2)
 
 ```
 
@@ -850,7 +847,7 @@ print(cor_fullSample)
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 corrplot(cor_fullSample, method = "circle")
-corrplot(cor(cor_fullSample),method="color", type="lower",
+corrplot(cor_fullSample,method="color", type="lower",
          addCoef.col = "black", 
          number.cex= 0.50, 
          tl.cex=0.50, tl.col="black")
@@ -868,7 +865,7 @@ chisq.test(table(DNZV1_ZCTA_shore$felev, DNZV1_ZCTA_shore$ZCTA_shore)) #Sig***
 summary(aov(felev ~ fWhite, data = DNZV1_ZCTA_shore)) #sig***
 summary(aov(felev ~ MHVadj_W_100k, data = DNZV1_ZCTA_shore)) #sig***
 summary(aov(felev ~ fS2ndHome, data = DNZV1_ZCTA_shore)) #sig ***
-summary(aov(felev ~ mrp_ideology, data = DNZV1_ZCTA_shore)) #sig ***
+summary(aov(felev ~ mrp_ideology1, data = DNZV1_ZCTA_shore)) #sig ***
 summary(aov(felev ~ fHisp, data = DNZV1_ZCTA_shore)) #sig***
 summary(aov(felev ~ fOwnOcc, data = DNZV1_ZCTA_shore)) #sig ***
 summary(aov(felev ~ fRentOcc, data = DNZV1_ZCTA_shore)) #sig ***
@@ -926,7 +923,7 @@ create_deciles <- function(df, column_name) {
 
 
 # List of columns to create deciles for
-columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
+columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology1", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
 
 # Apply the function to each column
 for (col in columns) {
@@ -968,7 +965,7 @@ M8 <- create_error_plot(DNZV1_ZCTA_shore, "TotHU_10k_dec", "felev", "Dec: Tot. H
 
 M9 <- create_error_plot(DNZV1_ZCTA_shore, "TotOccHU_10k_dec", "felev", "Dec: Tot. Occ. HU (10k)")
 M10 <- create_error_plot(DNZV1_ZCTA_shore, "RepRate_dec", "felev", "Dec: County Republican Vote Rate")
-M11 <- create_error_plot(DNZV1_ZCTA_shore, "mrp_ideology_dec", "felev", "Dec: MPR Ideology")
+M11 <- create_error_plot(DNZV1_ZCTA_shore, "mrp_ideology1_dec", "felev", "Dec: MPR Ideology")
 M12 <- create_error_plot(DNZV1_ZCTA_shore, "fOwnOcc_dec", "felev", "Dec: Fraction HUs. Owner Occ.")
 M13 <- create_error_plot(DNZV1_ZCTA_shore, "fRentOcc_dec", "felev", "Dec: Fraction HUs. Renter Occ.")
 M14 <- create_error_plot(DNZV1_ZCTA_shore, "fS2ndHome_dec", "felev", "Dec: Fraction HUs. 2nd Home")
@@ -988,7 +985,8 @@ plot_widths <- unit(rep(1, 3), "npc")
 plot_heights <- unit(rep(1, 7), "npc")
 
 library(gridExtra)
-grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,M13,M14,M15,M17,M18,M19,M20,M21, ncol=3)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10, ncol=2)
+grid.arrange(M11,M12,M13,M14,M15,M17,M18,M19,M20,M21, ncol=2)
 
 ```
 
@@ -1025,7 +1023,7 @@ L7 <- create_scatter_plot(DNZV1_ZCTA_shore, MHVadj_100k, felev, "MHV (100k)")
 L8 <- create_scatter_plot(DNZV1_ZCTA_shore, TotHU_10k, felev, "Tot. HU (10k)")
 L9 <- create_scatter_plot(DNZV1_ZCTA_shore, TotOccHU_10k, felev, "Tot. Occ. HU (10k)")
 L10 <- create_scatter_plot(DNZV1_ZCTA_shore, RepRate, felev, "County Republican Vote Rate")
-L11 <- create_scatter_plot(DNZV1_ZCTA_shore, mrp_ideology, felev, "MPR Ideology")
+L11 <- create_scatter_plot(DNZV1_ZCTA_shore, mrp_ideology1, felev, "MPR Ideology")
 L12 <- create_scatter_plot(DNZV1_ZCTA_shore, fOwnOcc, felev, "Fraction HUs. Owner Occ.")
 L13 <- create_scatter_plot(DNZV1_ZCTA_shore, fRentOcc, felev, "Fraction HUs. Renter Occ.")
 L14 <- create_scatter_plot(DNZV1_ZCTA_shore, fS2ndHome, felev, "Fraction HUs. 2nd Home")
@@ -1045,6 +1043,286 @@ plot_widths <- unit(rep(1, 3), "npc")
 plot_heights <- unit(rep(1, 7), "npc")
 
 library(gridExtra)
-grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L17,L18,L19,L20,L21, ncol=3)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10, ncol=2)
+grid.arrange(L11,L12,L13,L14,L15,L17,L18,L19,L20,L21, ncol=2)
+
+
+```
+
+
+
+
+## Sandy sample analysis
+
+
+### Scatterplots Sandy
+
+```{r include=FALSE}
+
+names(DNZV1_sandy)
+plot(DNZV1_sandy$felev, DNZV1_sandy$TotPop_W_10k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$PopDense_W_1k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$fWhite)
+plot(DNZV1_sandy$felev, DNZV1_sandy$fBlack)
+plot(DNZV1_sandy$felev, DNZV1_sandy$fHisp)
+plot(DNZV1_sandy$felev, DNZV1_sandy$MHIadj_W_10k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$MHVadj_W_100k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$TotHU_W_10k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$TotOccHU_W_10k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$RepRate)
+plot(DNZV1_sandy$felev, DNZV1_sandy$mrp_ideology1) #outlier
+plot(DNZV1_sandy$felev, DNZV1_sandy$fOwnOcc)
+plot(DNZV1_sandy$felev, DNZV1_sandy$fRentOcc)
+plot(DNZV1_sandy$felev, DNZV1_sandy$fS2ndHome)
+plot(DNZV1_sandy$felev, DNZV1_sandy$TaxBaseEst_1B_W)
+plot(DNZV1_sandy$felev, DNZV1_sandy$ZCTA_shore)
+plot(DNZV1_sandy$felev, DNZV1_sandy$count_fema_sfha_W_1k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$count_fs_risk_500_year00_W_1k)
+plot(DNZV1_sandy$felev, DNZV1_sandy$NFIP_ICCadj_YOLZ_W_1M) #outlier
+plot(DNZV1_sandy$felev, DNZV1_sandy$NFIP_AllClaimsAdj_YOLZ_W_10M) #outlier
+plot(DNZV1_sandy$felev, DNZV1_sandy$IHP_fldDamAmountAdjDNZ_W_10M)
+#plot(DNZV1_sandy$felev, DNZV1_sandy$Hurricane)
+
+
+```
+
+
+
+### Correlation Matrices
+
+```{r include=FALSE}
+DS_all_sandy <- DNZV1_sandy[,c("felev",
+                   "Elev", "Acqui",
+                   "TotPop_W_10k",
+                   "PopDense_W_1k", #NEW
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotHU_W_10k",  #NEW
+                   "TotOccHU_W_10k", 
+                   "RepRate",
+                   "mrp_ideology1", #NEW
+                   "fOwnOcc",
+                   "fRentOcc", #NEW
+                   "fS2ndHome",  #NEW
+                   "TaxBaseEst_1B_W",
+                   "ZCTA_shore", 
+                   "count_fema_sfha_W_1k",
+                   "count_fs_risk_500_year00_W_1k", #NEW
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "NFIP_AllClaimsAdj_YOLZ_W_10M", #NEW
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",
+                   "fyDeclared")]
+
+
+cor_sandySample <- cor(DS_all_sandy[,sapply(DS_all_sandy, is.numeric)])
+print(cor_sandySample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_sandySample, method = "circle")
+corrplot(cor_sandySample,method="color", type="lower",
+         addCoef.col = "black", 
+         number.cex= 0.50, 
+         tl.cex=0.50, tl.col="black")
+```
+
+
+
+### Univariate analysis 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Chi-Square Test for categorical variables
+#chisq.test(table(DNZV1_sandy$felev, DNZV1_sandy$Hurricane)) 
+chisq.test(table(DNZV1_sandy$felev, DNZV1_sandy$ZCTA_shore)) #Sig***
+
+# ANOVA for continuous variables
+summary(aov(felev ~ MHVadj_W_100k, data = DNZV1_sandy)) #sig***
+summary(aov(felev ~ fS2ndHome, data = DNZV1_sandy)) #sig ***
+summary(aov(felev ~ count_fema_sfha_W_1k, data = DNZV1_sandy)) #sig ***
+summary(aov(felev ~ RepRate, data = DNZV1_sandy)) #sig***
+
+summary(aov(felev ~ count_fs_risk_500_year00_W_1k, data = DNZV1_sandy)) #sig **
+
+summary(aov(felev ~ TotPop_W_10k, data = DNZV1_sandy)) #low sig*
+summary(aov(felev ~ TotOccHU_W_10k, data = DNZV1_sandy)) #low sig*
+summary(aov(felev ~ IHP_fldDamAmountAdjDNZ_W_10M, data = DNZV1_sandy)) #low sig*
+summary(aov(felev ~ MHIadj_W_10k, data = DNZV1_sandy)) #low sig*
+
+summary(aov(felev ~ fWhite, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ fBlack, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ mrp_ideology1, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ fHisp, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ fOwnOcc, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ fRentOcc, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ NFIP_ICCadj_YOLZ_W_1M, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ NFIP_AllClaimsAdj_YOLZ_W_10M, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ TotHU_W_10k, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ PopDense_W_1k, data = DNZV1_sandy)) #not sig
+summary(aov(felev ~ TaxBaseEst_1B_W, data = DNZV1_sandy)) #not sig
+
+
+
+
+```
+
+
+### Mean felev by deciles
+
+##### Creating Deciles
+```{r include = FALSE}
+#using non-winsorized vars:
+DNZV1_sandy$TotPop_10k <- DNZV1_sandy$TotPop / 10000
+DNZV1_sandy$PopDense_1k <- DNZV1_sandy$PopDenseSqMile / 1000
+DNZV1_sandy$MHIadj_10k <- DNZV1_sandy$MHIadj / 10000
+#MHVadj_100k
+DNZV1_sandy$TotHU_10k <- DNZV1_sandy$TotHU / 10000
+DNZV1_sandy$TotOccHU_10k <- DNZV1_sandy$TotOccHU / 10000
+DNZV1_sandy$count_fema_sfha_1k <- DNZV1_sandy$count_fema_sfha / 1000
+DNZV1_sandy$count_fs_risk_500_year00_1k <- DNZV1_sandy$count_fs_risk_500_year00 / 1000
+
+DNZV1_sandy$NFIP_ICCadj_YOLZ_1M <- DNZV1_sandy$NFIP_ICCadj_YOLZ / 1000000
+DNZV1_sandy$NFIP_AllClaimsAdj_YOLZ_10M <- DNZV1_sandy$NFIP_AllClaimsAdj_YOLZ / 10000000
+DNZV1_sandy$IHP_fldDamAmountAdjDNZ_10M <- DNZV1_sandy$IHP_fldDamAmountAdjDNZ /10000000
+
+# Function to create deciles and transform them into factors
+create_deciles <- function(df, column_name) {
+  if (is.null(df[[column_name]])) {
+    stop(paste("Column", column_name, "is NULL. Please provide a valid column."))
+  }
+  
+  df[[paste0(column_name, "_dec")]] <- ntile(df[[column_name]], 10)
+  df[[paste0(column_name, "_dec")]] <- as.factor(df[[paste0(column_name, "_dec")]])
+  print(table(df[[paste0(column_name, "_dec")]]))
+  return(df)
+}
+
+
+# List of columns to create deciles for
+columns <- c("TotPop_10k", "PopDense_1k", "fWhite", "fBlack", "fHisp", "MHIadj_10k", "MHVadj_100k", "TotHU_10k", "TotOccHU_10k", "RepRate", "mrp_ideology1", "fOwnOcc", "fRentOcc", "fS2ndHome", "TaxBaseEst_1B", "ZCTA_shore", "count_fema_sfha_1k", "count_fs_risk_500_year00_1k", "NFIP_ICCadj_YOLZ_1M", "NFIP_AllClaimsAdj_YOLZ_10M", "IHP_fldDamAmountAdjDNZ_10M", "Hurricane")
+
+# Apply the function to each column
+for (col in columns) {
+  DNZV1_sandy <- create_deciles(DNZV1_sandy, col)
+}
+
+# Optional: Display summaries if needed
+tapply(DNZV1_sandy$MHVadj_100k, DNZV1_sandy$MHVadj_100k_dec, summary)
+tapply(DNZV1_sandy$felev, DNZV1_sandy$MHVadj_100k_dec, summary)
+
+```
+
+##### Mean felev by deciles
+```{r include = FALSE}
+library(ggpubr)
+
+# Function to create ggerrorplot with common settings
+create_error_plot <- function(data, x_var, y_var, x_label) {
+  ggerrorplot(data = data, x = x_var, y = y_var, 
+              desc_stat = "mean_se",
+              error.plot = "errorbar",
+              add = "mean") +
+    ylab("Mean felev") +
+    xlab(x_label) +
+    scale_y_continuous(limits = c(0, 1))
+}
+
+# Create each plot using the function
+M1 <- create_error_plot(DNZV1_sandy, "MHVadj_100k_dec", "felev", "Deciles: Median Home Value (100k)")
+
+M1 <- create_error_plot(DNZV1_sandy, "TotPop_10k_dec", "felev", "Dec: Tot. Pop. (10k)")
+M2 <- create_error_plot(DNZV1_sandy, "PopDense_1k_dec", "felev", "Dec: Pop. Dense (1k)")
+M3 <- create_error_plot(DNZV1_sandy, "fWhite_dec", "felev", "Dec: Fraction White")
+M4 <- create_error_plot(DNZV1_sandy, "fBlack_dec", "felev", "Dec: Fraction Black")
+M5 <- create_error_plot(DNZV1_sandy, "fHisp_dec", "felev", "Dec: Fraction Hispanic")
+M6 <- create_error_plot(DNZV1_sandy, "MHIadj_10k_dec", "felev", "Dec: MHI (10k)")
+M7 <- create_error_plot(DNZV1_sandy, "MHVadj_100k_dec", "felev", "Dec: MHV (100k)")
+M8 <- create_error_plot(DNZV1_sandy, "TotHU_10k_dec", "felev", "Dec: Tot. HU (10k)")
+
+M9 <- create_error_plot(DNZV1_sandy, "TotOccHU_10k_dec", "felev", "Dec: Tot. Occ. HU (10k)")
+M10 <- create_error_plot(DNZV1_sandy, "RepRate_dec", "felev", "Dec: County Republican Vote Rate")
+M11 <- create_error_plot(DNZV1_sandy, "mrp_ideology1_dec", "felev", "Dec: MPR Ideology")
+M12 <- create_error_plot(DNZV1_sandy, "fOwnOcc_dec", "felev", "Dec: Fraction HUs. Owner Occ.")
+M13 <- create_error_plot(DNZV1_sandy, "fRentOcc_dec", "felev", "Dec: Fraction HUs. Renter Occ.")
+M14 <- create_error_plot(DNZV1_sandy, "fS2ndHome_dec", "felev", "Dec: Fraction HUs. 2nd Home")
+M15 <- create_error_plot(DNZV1_sandy, "TaxBaseEst_1B_dec", "felev", "Dec: Est. Tax Base (1B)")
+#M16 <- create_error_plot(DNZV1_sandy, "ZCTA_shore_dec", "felev", "Dec: Shoreline ZCTA")
+M17 <- create_error_plot(DNZV1_sandy, "count_fema_sfha_1k_dec", "felev", "Dec: Count HUs in FEMA SFHA (1k)")
+M18 <- create_error_plot(DNZV1_sandy, "count_fs_risk_500_year00_1k_dec", "felev", "Dec: FS Est. Count HUs in 500yr floodplain (1k)")
+M19 <- create_error_plot(DNZV1_sandy, "NFIP_ICCadj_YOLZ_1M_dec", "felev", "Dec: NFIP ICC YOLZ (1M)")
+M20 <- create_error_plot(DNZV1_sandy, "IHP_fldDamAmountAdjDNZ_10M_dec", "felev", "Dec: IHP Flood Dmg (10M)")
+#M21 <- create_error_plot(DNZV1_sandy, "Hurricane_dec", "felev", "Dec: Hurricane")
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_widths <- unit(rep(1, 3), "npc")
+plot_heights <- unit(rep(1, 7), "npc")
+
+library(gridExtra)
+grid.arrange(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10, ncol=2)
+grid.arrange(M11,M12,M13,M14,M15,M17,M18,M19,M20,M21, ncol=2)
+
+```
+
+
+
+
+### Logistic regression of DV against continuous IVs 
+Next we explore visualizations of logistic regressions of the DV against the IVs
+
+
+#### logit plots
+```{r include=FALSE}
+#Logistic plots
+# Function to create the scatter plots with smoothing
+create_scatter_plot <- function(data, x_var, y_var, x_label) {
+  ggplot(data = data, aes(x = {{ x_var }}, y = {{ y_var }})) +
+    geom_point(alpha = 0.10) +
+    stat_smooth(method = "glm", method.args = list(family = binomial), col = "magenta") +
+    ylab("felev") +
+    xlab(x_label) +
+    theme(text = element_text(size = 8)) +
+    scale_y_continuous(breaks = c(1, 0),
+                       labels = c("1: All Elevations", "0: All Buyouts"))
+}
+
+# Create each plot using the function
+L1 <- create_scatter_plot(DNZV1_sandy, TotPop_10k, felev, "Tot. Pop. (10k)")
+L2 <- create_scatter_plot(DNZV1_sandy, PopDense_1k, felev, "Pop. Dense (1k)")
+L3 <- create_scatter_plot(DNZV1_sandy, fWhite, felev, "Fraction White")
+L4 <- create_scatter_plot(DNZV1_sandy, fBlack, felev, "Fraction Black")
+L5 <- create_scatter_plot(DNZV1_sandy, fHisp, felev, "Fraction Hispanic")
+L6 <- create_scatter_plot(DNZV1_sandy, MHIadj_10k, felev, "MHI (10k)")
+L7 <- create_scatter_plot(DNZV1_sandy, MHVadj_100k, felev, "MHV (100k)")
+L8 <- create_scatter_plot(DNZV1_sandy, TotHU_10k, felev, "Tot. HU (10k)")
+L9 <- create_scatter_plot(DNZV1_sandy, TotOccHU_10k, felev, "Tot. Occ. HU (10k)")
+L10 <- create_scatter_plot(DNZV1_sandy, RepRate, felev, "County Republican Vote Rate")
+L11 <- create_scatter_plot(DNZV1_sandy, mrp_ideology1, felev, "MPR Ideology")
+L12 <- create_scatter_plot(DNZV1_sandy, fOwnOcc, felev, "Fraction HUs. Owner Occ.")
+L13 <- create_scatter_plot(DNZV1_sandy, fRentOcc, felev, "Fraction HUs. Renter Occ.")
+L14 <- create_scatter_plot(DNZV1_sandy, fS2ndHome, felev, "Fraction HUs. 2nd Home")
+L15 <- create_scatter_plot(DNZV1_sandy, TaxBaseEst_1B, felev, "Est. Tax Base (1B)")
+#L16 <- create_scatter_plot(DNZV1_sandy, ZCTA_shore, felev, "Shoreline ZCTA")
+L17 <- create_scatter_plot(DNZV1_sandy, count_fema_sfha_1k, felev, "Count HUs in FEMA SFHA (1k)")
+L18 <- create_scatter_plot(DNZV1_sandy, count_fs_risk_500_year00_1k, felev, "FS Est. Count HUs in 500yr floodplain (1k)")
+L19 <- create_scatter_plot(DNZV1_sandy, NFIP_ICCadj_YOLZ_1M, felev, "NFIP ICC YOLZ (1M)")
+L20 <- create_scatter_plot(DNZV1_sandy, IHP_fldDamAmountAdjDNZ_10M, felev, "IHP Flood Dmg (10M)")
+L21 <- create_scatter_plot(DNZV1_sandy, Hurricane, felev, "Hurricane")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Define the widths and heights for the plots
+plot_widths <- unit(rep(1, 3), "npc")
+plot_heights <- unit(rep(1, 7), "npc")
+
+library(gridExtra)
+grid.arrange(L1,L2,L3,L4,L5,L6,L7,L8,L9,L10, ncol=2)
+grid.arrange(L11,L12,L13,L14,L15,L17,L18,L19,L20,L21, ncol=2)
+
 
 ```

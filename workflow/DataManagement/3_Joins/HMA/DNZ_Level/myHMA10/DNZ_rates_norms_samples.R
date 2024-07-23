@@ -188,6 +188,8 @@ plot(DNZ11$felev, DNZ11$pct_fema_sfha) #fraction and deciles
 #plot(DNZ11$fCoastal)
 #plot(DNZ11$felev, DNZ11$fRiverine)
 plot(DNZ11$felev, DNZ11$TotOccHU) # norm
+range(DNZ11$mrp_ideology)
+plot(DNZ11$felev, DNZ11$mrp_ideology) #rescale to be between 0 and 1
 
 
 range(DNZ11$IHP_fldDamAmountAdjDNZ) #win, 1M
@@ -296,6 +298,18 @@ plot(DNZ11$MHVadj_W)
 DNZ11$MHVadj_W_100k <- DNZ11$MHVadj_W/100000
 range(DNZ11$MHVadj_W_100k, na.rm=T)
 plot(DNZ11$MHVadj_W_100k)
+
+#mrp_ideology
+# Function to rescale the variable
+rescale <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# Apply the function to the variable
+DNZ11$mrp_ideology1 <- rescale(DNZ11$mrp_ideology)
+range(DNZ11$mrp_ideology1)
+plot(DNZ11$mrp_ideology1, DNZ11$felev)
+
 
 
 #f_fema_sfha####
@@ -607,7 +621,7 @@ DNZ12 <-DNZ11[,c("DNZ","DN","fyDeclared", "YOLZ","GZCTA","stateNumberCode", "p2s
                  "S2ndHomePct", "fS2ndHome",
                  #"MedYrBuilt","Decade_MedYrBuilt",
                  "TaxBaseEst_1B","TaxBaseEst_1B_W",
-                 "RepRate", "mrp_ideology")]
+                 "RepRate", "mrp_ideology1")]
 
 
 names(DNZ12)
@@ -640,6 +654,22 @@ StateNumLG <- StateNumLG[,c(1,3)]
 DNZ14 <- left_join(DNZ13,StateNumLG, by ="p2state",copy=F)
 
 table(DNZ14$p2state)
+
+#creating Storm name####
+
+names_list <- c("alex", "andrew", "barry", "bob", "bonnie", "bret", "charley", "claudette", 
+                "delta", "dennis", "dorian", "earl", "emily", "erin", "florence", "floyd", 
+                "fran", "frances", "georges", "gustav", "harvey", "hermine", "ian", "ida", 
+                "ike", "irma", "isaac", "isabel", "isaias", "ivan", "jeanne", "katrina", 
+                "laura", "lili", "matthew", "michael", "nate", "nicole", "opal", "ophelia", 
+                "rita", "sally", "sandy", "wilma", "zeta")
+
+DNZ14$namedStorm <- NA
+for (name in names_list) {
+  DNZ14$namedStorm[DNZ14$declarationTitle %like% name] <- name
+}
+
+table(DNZ14$namedStorm)
 
 
 #QC####

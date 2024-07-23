@@ -1,0 +1,1182 @@
+
+
+---
+title: "Supplementary Information: Models"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    theme: united
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+##Libraries
+
+library(ggplot2)
+library(dplyr)
+library(caret)
+
+library(pacman)
+library(stringr)
+
+library(Hmisc)
+library(tidycensus)
+library(tidyverse)
+library(corrplot)
+library(data.table)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+
+library(forcats)
+library(boot)
+library(bootstrap)
+library(fixest)
+library(lmtest)
+library(sandwich)
+library(cowplot)
+
+library(pROC)
+library(MASS)
+
+library(SSVS)
+
+
+options (scipen=999)
+
+#importing data
+DNZV1 <- read.csv('C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/DNZV1_unLev.csv')
+names(DNZV1)
+DNZV1_shore  <- subset(DNZV1, ZCTA_shore==1)
+table(DNZV1_shore$p2state)
+
+DNZV1_shore <- subset(DNZV1_shore, p2state!="Illinois" &
+                         p2state!="Indiana" & 
+                         p2state!="Kentucky" & 
+                         p2state!="Ohio" &
+                         p2state!="West Virginia")
+
+```
+
+## Examining for outliers
+```{r include=FALSE}
+plot(DNZV1_shore$felev, DNZV1_shore$MHVadj_W_100k)
+plot(DNZV1_shore$felev, DNZV1_shore$fWhite)
+plot(DNZV1_shore$felev, DNZV1_shore$NFIP_ICCadj_YOLZ_W_1M)
+plot(DNZV1_shore$felev, DNZV1_shore$count_fema_sfha_W_1k)
+
+
+```
+
+## Full Sample Variable Selection Procedure
+
+
+### M0 Stepwise regression on all variables
+
+Here I add all variables to the regression model and then apply stepwise AIC to see what variables are selected 
+```{r include = FALSE}
+M0_all <- glm(felev~
+                TotPop_W_10k +
+                PopDense_W_1k +
+                fWhite +
+                fBlack +
+                fHisp +
+                MHIadj_W_10k +
+                MHVadj_W_100k +
+                TotOccHU_W_10k +
+                TotHU_W_10k +
+                RepRate +
+                #mrp_ideology1 +
+                fOwnOcc +
+                fRentOcc +
+                TaxBaseEst_1B_W +
+                count_fema_sfha_W_1k +
+                NFIP_AllClaimsAdj_YOLZ +
+                NFIP_ICCadj_YOLZ_W_1M +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                Hurricane +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M0_all)
+
+#note: this takes processing time
+stepwise_M0_all <- stepAIC(M0_all, direction = "both") #this selects the model with the lowest AIC
+summary(stepwise_M0_all)
+
+```
+
+### SVSS test
+Running SVSS test to see which variables are included
+```{r include = FALSE}
+outcome <- "felev"
+predictors <- c("TotPop_W_10k",
+                   "PopDense_W_1k",
+                   "fWhite",
+                   "fBlack",
+                   "fHisp",
+                   "MHIadj_W_10k",
+                   "MHVadj_W_100k",
+                   "TotOccHU_W_10k",
+                   "TotHU_W_10k",
+                   "RepRate",
+                   "mrp_ideology1",
+                   "fOwnOcc",
+                   "fRentOcc",
+                   "TaxBaseEst_1B_W",
+                   "count_fema_sfha_W_1k",
+                   "NFIP_AllClaimsAdj_YOLZ", 
+                   "NFIP_ICCadj_YOLZ_W_1M",
+                   "IHP_fldDamAmountAdjDNZ_W_10M",
+                   "Hurricane",                  
+                   "fyDeclared",
+                   "StateNumLG")
+
+
+svss_fs_allvars <- ssvs(data=DNZV1_shore,
+     y=outcome,
+     x=predictors,
+     continuous = FALSE,
+     inprob=0.5,
+     runs=1000,
+     burn=500)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot(svss_fs_allvars)
+
+```
+
+
+### Correlation Matrices on select vars
+Note that in preparation for modeling, we examine all of the variables recommended in the SVSS test, plus variables that were significant in the Chi-Square and Anova tests, and are relevant to the literature based on domain knowledge. 
+
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1_shore[,c("TotPop_W_10k",    #ANOVA, 
+                       "PopDense_W_1k",         #Stepwise
+                       "fWhite",                #ANOVA, Stepwise
+                       "fHisp",                 #ANOVA, stepwise, SVSS
+                       "MHIadj_W_10k",          #stepwise
+                       "MHVadj_W_100k",         #ANOVA, stepwise, SVSS
+                       "TotOccHU_W_10k",        #ANOVA, stepwise, SVSS
+                       "TotHU_W_10k",           #ANOVA, stepwise
+                       "mrp_ideology1",          #ANOVA, stepwise
+                       "fOwnOcc",               #ANOVA
+                       "fRentOcc",              #ANOVA
+                       "TaxBaseEst_1B_W",       #stepwise
+                       "count_fema_sfha_W_1k",  #ANOVA, stepwise, svss
+                       "NFIP_ICCadj_YOLZ_W_1M", #ANOVA, stepwise, svss
+                       "Hurricane")]            #ANOVA, SVSS        
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor_fullSample,method="color", type="lower",
+         addCoef.col = "black" , 
+         number.cex= 0.50, 
+         tl.cex=0.50, tl.col="black")
+```
+
+
+
+
+##Stepwise Regression 
+
+## Model 1: All hypotheses
+
+
+##### Correlation Matrices for M1
+
+```{r include=FALSE}
+fs_vars_V1 <- DNZV1_shore[,c(#"TotPop_W_10k",    #ANOVA, Stepwis
+                       "PopDense_W_1k",         #Stepwise
+                       "fWhite",                #ANOVA, Stepwise
+                       #"fHisp",                 #ANOVA, stepwise, SVSS
+                       #"MHIadj_W_10k",          #stepwise
+                       "MHVadj_W_100k",         #ANOVA, stepwise, SVSS
+                       #"TotOccHU_W_10k",        #ANOVA, stepwise, SVSS
+                       #"TotHU_W_10k",           #ANOVA, stepwise
+                       #"mrp_ideology1",          #ANOVA, stepwise
+                       #"TaxBaseEst_1B_W",       #stepwise
+                       "count_fema_sfha_W_1k",  #ANOVA, stepwise, svss
+                       "NFIP_ICCadj_YOLZ_W_1M", #ANOVA, stepwise, svss
+                       "Hurricane")]            #ANOVA, SVSS 
+
+cor_fullSample <- cor(fs_vars_V1[,sapply(fs_vars_V1, is.numeric)])
+print(cor_fullSample)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+corrplot(cor_fullSample, method = "circle")
+corrplot(cor_fullSample,method="color", type="lower",
+         addCoef.col = "black" , 
+         number.cex= 0.50, 
+         tl.cex=0.50, tl.col="black")
+```
+
+Based on analysis of the correlation matrix, we retain all variables. Next we run a model without Fixed effects and check the VIF scores. 
+
+##### M1 - Full model without fixed effects & select vars -checking VIF
+```{r include=FALSE}
+# Full model without fixed effects (fe)
+M1 <- glm(felev ~  
+             MHVadj_W_100k +
+             fWhite+
+             #mrp_ideology1 +
+             Hurricane + 
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+             PopDense_W_1k, 
+           data = DNZV1_shore, family = binomial)
+
+
+##testing for overdispersion
+deviance(M1)/df.residual(M1) #
+
+```
+
+###### VIF
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+##testing for multicollinearity
+M1_Vif <- car::vif(M1) #
+M1_Vif #GOOD
+
+```
+
+The results of the VIF suggest that all of these variables are ok to include for M1. Now adding fixed effects, as well as an interaction term on fWhite and MHV. Then we run the stepwise procedure to select the final model.
+
+##GOT HERE ####
+
+#####  M1 - Full model with fixed effects & select vars
+```{r include=FALSE}
+# Full model with all predictors
+M1 <- glm(felev ~  
+             MHVadj_W_100k +
+             fWhite+
+             MHVadj_W_100k*fWhite +
+             #mrp_ideology1 +
+             Hurricane + 
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+             #PopDense_W_1k +
+             TotPop_W_10k +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+summary(M1)
+
+#testing for overdispersion
+deviance(M1)/df.residual(M1) #
+
+##testing for multicollinearity
+M1_Vif <- car::vif(M1) #Note - includes FE
+M1_Vif
+
+#exponentiating coeff for odds ratios
+M1_Exp <- M1
+M1_Exp$coefficients <- exp(M1_Exp$coefficients)
+M1_Exp
+
+# pseudo R-squared
+R1 <- (1-(M1$deviance)/(M1$null.deviance))
+R1 <- round(R1,2)
+R1
+
+##Model Viz
+V1 <- stargazer(M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/zs_M1_fe.htm")
+```
+
+
+
+
+###Running stepwise to obtain final model for analysis
+```{R include=FALSE}
+M1_SW <- stepAIC(M1, direction = "both")  
+summary(M1_SW)
+
+```
+
+The stepwise procedure identifies a model that includes 4 variablesand fixed effects.
+
+Note that the stepwise model drops variables of interest like race, political ideology, and controls like population density. 
+
+##### M1_SW: M1 stepwise model & diagnostics
+```{r include= FALSE}
+M1_SW <- glm(felev ~  
+             MHVadj_W_100k +
+             #mrp_ideology1 +
+             fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+summary(M1_SW)
+
+##testing for overdispersion
+deviance(M1_SW)/df.residual(M1_SW) #
+
+##testing for multicollinearity
+M1_SW_Vif <- car::vif(M1_SW) #Note - includes FE
+M1_SW_Vif
+
+#exponentiating coeff for odds ratios
+M1_SW_Exp <- M1_SW
+M1_SW_Exp$coefficients <- exp(M1_SW_Exp$coefficients)
+M1_SW_Exp
+
+# pseudo R-squared
+R1 <- (1-(M1_SW$deviance)/(M1_SW$null.deviance))
+R1 <- round(R1,2)
+R1
+
+##Model Viz
+V1 <- stargazer(M1_SW,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/zs_M1SW_fe.htm")
+
+
+
+```
+
+```{r echo=FALSE, results= 'asis'}
+stargazer(M1_SW,
+                type="html",
+                omit=c("fyDeclared", "StateNumLG"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model 1B: Full sample (testing Race and MHV", 
+                dep.var.labels = c("odds Ratio of felev"),
+                add.lines = list(c("State FE","YES"),
+                                 c("Year FE", "YES"),
+                                 c("Pseudo $R2$", R1)),
+                covariate.labels = c("MHV ($100k W)",
+                                     "Fraction White",
+                                     "Count of HUs in FEMA SFHA 1k (W)",
+                                     "NFIP ICC Claims 1M (W) by ZCTA-YOL"),
+                digits=2,
+                column.sep.width = "10pt",
+                single.row = FALSE,
+                align=TRUE)
+```
+
+
+##### M1 Series A.0: Single variable model all explanatory vars, with Fixed Effects:
+```{r include= FALSE}
+
+##M0: FE 
+names(DNZV1_shore)
+M0 <- glm(felev~
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M0)
+
+##testing for overdispersion
+deviance(M0)/df.residual(M0)
+
+##testing for multicollinearity
+M0_Vif <- car::vif(M0) 
+M0_Vif
+
+#exponentiating coeff for odds ratios
+M0Exp <- M0
+M0Exp$coefficients <- exp(M0Exp$coefficients)
+M0Exp
+
+# pseudo R-squared
+R0 <- (1-(M0$deviance)/(M0$null.deviance))
+R0 <- round(R0,2)
+R0
+
+
+##M1: MHV
+names(DNZV1_shore)
+M1 <- glm(felev~
+            MHVadj_W_100k +
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M1)
+
+##testing for overdispersion
+deviance(M1)/df.residual(M1)
+
+##testing for multicollinearity
+M1_Vif <- car::vif(M1) 
+M1_Vif
+
+#exponentiating coeff for odds ratios
+M1Exp <- M1
+M1Exp$coefficients <- exp(M1Exp$coefficients)
+M1Exp
+
+# pseudo R-squared
+R1 <- (1-(M1$deviance)/(M1$null.deviance))
+R1 <- round(R1,2)
+R1
+
+##M2: fWhite
+names(DNZV1_shore)
+M2 <- glm(felev~
+            fWhite +
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M2)
+
+##testing for overdispersion
+deviance(M2)/df.residual(M2)
+
+##testing for multicollinearity
+M2_Vif <- car::vif(M2) 
+M2_Vif
+
+#exponentiating coeff for odds ratios
+M2Exp <- M2
+M2Exp$coefficients <- exp(M2Exp$coefficients)
+M2Exp
+
+# pseudo R-squared
+R2 <- (1-(M2$deviance)/(M2$null.deviance))
+R2 <- round(R2,2)
+R2
+
+##M4: count_fema_sfha_W_1k
+names(DNZV1_shore)
+M4 <- glm(felev~
+            count_fema_sfha_W_1k +
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M4)
+
+##testing for overdispersion
+deviance(M4)/df.residual(M4)
+
+##testing for multicollinearity
+M4_Vif <- car::vif(M4) 
+M4_Vif
+
+#exponentiating coeff for odds ratios
+M4Exp <- M4
+M4Exp$coefficients <- exp(M4Exp$coefficients)
+M4Exp
+
+# pseudo R-squared
+R4 <- (1-(M4$deviance)/(M4$null.deviance))
+R4 <- round(R4,2)
+R4
+
+
+##M5: NFIP_ICCadj_YOLZ_W_1M
+names(DNZV1_shore)
+M5 <- glm(felev~
+            NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(M5)
+
+##testing for overdispersion
+deviance(M5)/df.residual(M5)
+
+##testing for multicollinearity
+M5_Vif <- car::vif(M5) 
+M5_Vif
+
+#exponentiating coeff for odds ratios
+M5Exp <- M5
+M5Exp$coefficients <- exp(M5Exp$coefficients)
+M5Exp
+
+# pseudo R-squared
+R5 <- (1-(M5$deviance)/(M5$null.deviance))
+R5 <- round(R5,2)
+R5
+
+
+
+#Model All
+V1 <- stargazer(M0,M1,M2,M4,M5,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison: Single Variable Model \n Shore Sample", 
+                dep.var.labels = c("odds Ratio of felev"),
+                add.lines = list(c("State FE","YES","YES","YES","YES","YES"),
+                                 c("Year FE", "YES","YES","YES","YES","YES"),
+                                 c("Pseudo $R2$", R0,R1,R2,R4,R5)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/zs_M1SW_fe_singleVarModels.htm")
+```
+
+```{r echo=FALSE, results= 'asis'}
+stargazer(M0,M1,M2,M4,M5,
+                type="html",
+                omit=c("fyDeclared", "StateNumLG"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison: Single Variable Model \n Shore Sample", 
+                dep.var.labels = c("odds Ratio of felev"),
+                add.lines = list(c("State FE","YES","YES","YES","YES","YES"),
+                                 c("Year FE", "YES","YES","YES","YES","YES"),
+                                 c("Pseudo $R2$", R0,R1,R2,R4,R5)),
+                covariate.labels = c("MHV ($100k W)",
+                                     "Fraction White",
+                                     "Count of HUs in FEMA SFHA 1k (W)",
+                                     "NFIP ICC Claims 1M (W) by ZCTA-YOL"),
+                digits=2,
+                column.sep.width = "10pt",
+                single.row = FALSE,
+                align=TRUE)
+```
+
+
+
+##### M1 Series A.1 (Starting with best model from above and dropping vars)
+```{r include= FALSE}
+##M1: All vars included in stepwise model
+M1 <- glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+
+##testing for overdispersion
+deviance(M1)/df.residual(M1) #
+
+##testing for multicollinearity
+M1_Vif <- car::vif(M1) ## 
+M1_Vif
+
+#exponentiating coeff for odds ratios
+M1Exp <- M1
+M1Exp$coefficients <- exp(M1Exp$coefficients)
+M1Exp
+
+# pseudo R-squared
+R1 <- (1-(M1$deviance)/(M1$null.deviance))
+R1 <- round(R1,2)
+R1
+
+
+##M2: dropping MHV
+M2 <- glm(felev ~  
+             #MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+
+##testing for overdispersion
+deviance(M2)/df.residual(M2) #
+
+##testing for multicollinearity
+M2_Vif <- car::vif(M2) ## 
+M2_Vif
+
+#exponentiating coeff for odds ratios
+M2Exp <- M2
+M2Exp$coefficients <- exp(M2Exp$coefficients)
+M2Exp
+
+# pseudo R-squared
+R2 <- (1-(M2$deviance)/(M2$null.deviance))
+R2 <- round(R2,2)
+R2
+
+
+##M3: dropping mrp_ideology1
+M3 <- glm(felev ~  
+             MHVadj_W_100k +
+             #fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+
+summary(M3)
+
+##testing for overdispersion
+deviance(M3)/df.residual(M3) #
+
+##testing for multicollinearity
+M3_Vif <- car::vif(M3) ## 
+M3_Vif
+
+#exponentiating coeff for odds ratios
+M3Exp <- M3
+M3Exp$coefficients <- exp(M3Exp$coefficients)
+M3Exp
+
+# pseudo R-squared
+R3 <- (1-(M3$deviance)/(M3$null.deviance))
+R3 <- round(R3,2)
+R3
+
+
+##M4: dropping count_fema_sfha_W_1k
+M4 <- glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             #count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+summary(M4)
+
+##testing for overdispersion
+deviance(M4)/df.residual(M4) #
+
+##testing for multicollinearity
+M4_Vif <- car::vif(M4) ## 
+M4_Vif
+
+#exponentiating coeff for odds ratios
+M4Exp <- M4
+M4Exp$coefficients <- exp(M4Exp$coefficients)
+M4Exp
+
+# pseudo R-squared
+R4 <- (1-(M4$deviance)/(M4$null.deviance))
+R4 <- round(R4,2)
+R4
+
+
+##M5: dropping NFIP_ICCadj_YOLZ_W_1M
+M5 <-  glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             #NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+summary(M5)
+
+##testing for overdispersion
+deviance(M5)/df.residual(M5) #
+
+##testing for multicollinearity
+M5_Vif <- car::vif(M5) ## 
+M5_Vif
+
+#exponentiating coeff for odds ratios
+M5Exp <- M5
+M5Exp$coefficients <- exp(M5Exp$coefficients)
+M5Exp
+
+# pseudo R-squared
+R5 <- (1-(M5$deviance)/(M5$null.deviance))
+R5 <- round(R5,2)
+R5
+
+
+
+
+#Model All
+V1 <- stargazer(M1,M2,M3,M4,M5, type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Odds Ratio of felev"),
+                add.lines = list(c("State FE","YES", "YES", "YES", "YES","YES","YES"),
+                                 c("Year FE", "YES", "YES", "YES", "YES","YES","YES"),
+                                 c("Pseudo $R2$", R1,R2,R3,R4,R5)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/zs_M1SW_fe_dropVars.htm")
+```
+
+```{r echo=FALSE, results= 'asis'}
+stargazer(M1,M2,M3,M4,M5,type="html",
+                omit=c("fyDeclared", "StateNumLG"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison: Full Sample, Dropping variables", 
+                dep.var.labels = c("Odds Ratio of felev"),
+                add.lines = list(c("State FE",  "YES", "YES", "YES","YES", "YES"),
+                                 c("Year FE",  "YES", "YES", "YES","YES", "YES"),
+                                 c("Pseudo $R2$",  R1,R2,R3,R4,R5)),
+                covariate.labels = c("MHV ($100k W)",
+                                     "Fraction White",
+                                     "Count of HUs in FEMA SFHA 1k (W)",
+                                     "NFIP ICC Claims 1M (W) by ZCTA-YOL"),
+                digits=2,
+                column.sep.width = "10pt",
+                single.row = FALSE,
+                align=TRUE)
+```
+The model above confirms that the stepwise process selected the model with the lowest AIC
+
+
+##### Post Tests M1
+```{r include = FALSE}
+##M1: All vars included in the final stepwise model
+M1 <- glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             #NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore, family = binomial)
+  
+```
+
+
+##### Examining outliers and leverage points
+###### Diagnostics:
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(2,2))
+plot(M1) #note that 1405 and 427, appear to be outliers
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#following R in Action p. 305
+# Set up a 2 by 2 plotting area
+par(mfrow = c(2, 2))
+
+# Plot 1: Predicted values vs. deviance residuals
+plot(predict(M1, type = "response"),
+     residuals(M1, type = "deviance"),
+     main = "Predicted vs. Deviance Residuals",
+     xlab = "Predicted Values",
+     ylab = "Deviance Residuals")
+
+# Plot 2: Hat values
+plot(hatvalues(M1),
+     main = "Hat Values",
+     xlab = "Index",
+     ylab = "Hat Values")
+
+# Plot 3: Studentized residuals
+plot(rstudent(M1),
+     main = "Studentized Residuals",
+     xlab = "Index",
+     ylab = "Studentized Residuals")
+
+# Plot 4: Cook's distance
+plot(cooks.distance(M1),
+     main = "Cook's Distance",
+     xlab = "Index",
+     ylab = "Cook's Distance")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Identifying outliers
+#from book p.194
+outlierTest(M1) #note that 427 is identified as outliers
+
+```
+
+```{r include= FALSE}
+hat.plot <- function(M1) {
+  p <- length(coefficients(M1))
+  n <- length(fitted(M1))
+  plot(hatvalues(M1), main="Index Plot of Hat Values")
+  abline(h=c(2,3)*p/n, col="red", lty=2)
+  identify(1:n, hatvalues(M1), names(hatvalues(M1)))
+  
+}
+
+#hat.plot(M1) #getting issue here
+```
+
+######Identifying influential observations 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#following (p.196)
+cutoff <- 4/(nrow(DNZV1_shore)-length(M1$coefficients)-2)
+plot(M1, which=4, cook.levels=cutoff)
+abline(h=cutoff, lty=2, col="red")  #
+
+#assessing impact of influential observations on vars
+library(car)
+#avPlots(M1, ask=FALSE, id.method="identify") This takes time. Identifies similar DNZs
+
+#influence plots
+influencePlot(M1) #
+
+#examining the rows that are identifies as outliers or leverage points 
+seeLev <- DNZV1_shore[c(24,339,3463,4397),]
+
+
+```
+
+
+### M1_Unlev: Dropping leverage points and rerunning model 
+```{r include= FALSE}
+DNZV1_shore_unLev <- DNZV1_shore[-c(4, 24, 427, 1405, 4338, 1583), ]
+
+M1_unlev <-  glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore_unLev , family = binomial)
+summary(M1_unlev)
+
+
+##testing for overdispersion
+deviance(M1_unlev)/df.residual(M1_unlev)
+
+##testing for multicollinearity
+M1_unlev_Vif <- car::vif(M1_unlev) #not this includes fixed effects
+M1_unlev_Vif
+
+#exponentiating coeff for odds ratios
+M1_unlevExp <- M1_unlev
+M1_unlevExp$coefficients <- exp(M1_unlevExp$coefficients)
+M1_unlevExp
+
+# pseudo R-squared
+R1 <- (1-(M1_unlev$deviance)/(M1_unlev$null.deviance))
+R1 <- round(R1,2)
+R1
+
+##Model All
+V1 <- stargazer(M1_unlev,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/zs_M1SW_unlev_fe.htm")
+
+
+```
+
+
+```{r echo=FALSE, results= 'asis'}
+stargazer(M1_unlev, 
+          type="html",
+                omit=c("fyDeclared", "StateNumLG"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison: Dropping Influential Observations", 
+                dep.var.labels = c("Odds Ratio of felev"),
+                add.lines = list(c("State FE","Yes"),
+                                 c("Year FE", "Yes"),
+                                 c("Pseudo $R2$", R1)),
+                covariate.labels = c("MHV ($100k W)",
+                                     "Fraction White",
+                                     "Count of HUs in FEMA SFHA 1k (W)",
+                                     "NFIP ICC Claims 1M (W) by ZCTA-YOL"),
+                digits=2,
+                column.sep.width = "10pt",
+                single.row = FALSE,
+                align=TRUE)
+```
+
+##### Post Tests M1_unLev
+```{r include = FALSE}
+##M1: All vars included in the final stepwise model
+
+M1<-  glm(felev ~  
+             MHVadj_W_100k +
+             fWhite +
+             count_fema_sfha_W_1k +
+             NFIP_ICCadj_YOLZ_W_1M +
+            factor(StateNumLG) +
+            factor(fyDeclared), 
+            data = DNZV1_shore_unLev , family = binomial)
+
+summary(M1)
+```
+
+
+##### Examining outliers and leverage points
+
+###### Diagnostics
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(2,2))
+plot(M1) #
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#following R in Action p. 305
+# Set up a 2 by 2 plotting area
+par(mfrow = c(2, 2))
+
+# Plot 1: Predicted values vs. deviance residuals
+plot(predict(M1, type = "response"),
+     residuals(M1, type = "deviance"),
+     main = "Predicted vs. Deviance Residuals",
+     xlab = "Predicted Values",
+     ylab = "Deviance Residuals")
+
+# Plot 2: Hat values
+plot(hatvalues(M1),
+     main = "Hat Values",
+     xlab = "Index",
+     ylab = "Hat Values")
+
+# Plot 3: Studentized residuals
+plot(rstudent(M1),
+     main = "Studentized Residuals",
+     xlab = "Index",
+     ylab = "Studentized Residuals")
+
+# Plot 4: Cook's distance
+plot(cooks.distance(M1),
+     main = "Cook's Distance",
+     xlab = "Index",
+     ylab = "Cook's Distance")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Identifying outliers
+#from book p.194
+outlierTest(M1) #
+
+```
+
+```{r include= FALSE}
+hat.plot <- function(M1) {
+  p <- length(coefficients(M1))
+  n <- length(fitted(M1))
+  plot(hatvalues(M1), main="Index Plot of Hat Values")
+  abline(h=c(2,3)*p/n, col="red", lty=2)
+  identify(1:n, hatvalues(M1), names(hatvalues(M1)))
+  
+}
+
+#hat.plot(M1) #getting issue here
+```
+
+######Identifying influential observations 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#identifying influential observations (p.196)
+cutoff <- 4/(nrow(DNZV1_shore_unLev)-length(M1$coefficients)-2)
+plot(M1, which=4, cook.levels=cutoff)
+abline(h=cutoff, lty=2, col="red")
+
+#assessing impact of influential observations on vars
+library(car)
+#avPlots(M1, ask=FALSE, id.method="identify") This takes time. Identifies similar DNZs
+
+#influence plots
+influencePlot(M1) #identifies 
+
+
+```
+
+###### Drawing predicted probabilities 
+```{r include= FALSE}
+#following: https://www.bing.com/videos/riverview/relatedvideo?&q=logistic+regression+in+r&&mid=B29E2A8DFA23C6D477A5B29E2A8DFA23C6D477A5&&FORM=VRDGAR
+predicted.data.M1 <- data.frame(probability.of.elev=M1$fitted.values,
+                              felev=DNZV1_shore_unLev)
+
+#sorting from low to high
+predicted.data.M1 <- predicted.data.M1[
+  order(predicted.data.M1$probability.of.elev, decreasing=FALSE),]
+
+#add a new column to the data.frame that has the rank of each sample, from low probability to high probability
+predicted.data.M1$rank <- 1:nrow(predicted.data.M1)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#draw data
+ggplot(data=predicted.data.M1, aes(x=rank, y=probability.of.elev))+
+  geom_point(aes(color=probability.of.elev), alpha=1, shape= 4, stroke =2)+
+  xlab("Index")+
+  ylab("Predicted probability of Elevation")
+```
+
+
+
+#####
+```{r include= FALSE}
+path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA/DNZLevel/DNZ_V1/")
+write.csv(DNZV1_shore_unLev, file.path(path1, "DNZV1_shore_unLev.csv"), row.names=TRUE)
+
+```
+
+
+
+
+#### Logistic model comparing original Dissertation model with SVSS predictors 
+```{r include = FALSE}
+##Dis_M1: All + Baseline (w year FEs)
+names(DNZV1_shore)
+Dis_M1 <- glm(felev~
+                MHVadj_W_100k +
+                fWhite +
+                RepRate +
+                ZCTA_shore +
+                count_fema_sfha_W_1k +
+                IHP_fldDamAmountAdjDNZ_W_10M +
+                TotPop_W_10k +
+                factor(StateNumLG) +
+                factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(Dis_M1)
+
+##testing for overdispersion
+deviance(Dis_M1)/df.residual(Dis_M1) #0.52
+
+##testing for multicollinearity
+#Dis_M1_Vif <- car::vif(Dis_M1) #
+#Dis_M1_Vif
+
+#exponentiating coeff for odds ratios
+Dis_M1Exp <- Dis_M1
+Dis_M1Exp$coefficients <- exp(Dis_M1Exp$coefficients)
+Dis_M1Exp
+
+# pseudo R-squared
+Dis_R1 <- (1-(Dis_M1$deviance)/(Dis_M1$null.deviance))
+Dis_R1 <- round(Dis_R1,2)
+Dis_R1
+
+
+##SVSS_M1: All + Baseline (w year FEs)
+names(DNZV1_shore)
+SVSS_M1 <- glm(felev~
+            fWhite +
+            MHVadj_W_100k +
+            #mrp_ideology1 +
+            TaxBaseEst_1B_W +
+            ZCTA_shore +
+            NFIP_ICCadj_YOLZ_W_1M +
+            count_fema_sfha_W_1k +
+            Hurricane +
+            factor(StateNumLG) +
+            factor(fyDeclared),
+          data=DNZV1_shore,family=binomial(link = "logit"))
+summary(SVSS_M1)
+
+##testing for overdispersion
+deviance(SVSS_M1)/df.residual(SVSS_M1) #0.52
+
+##testing for multicollinearity
+#SVSS_M1_Vif <- car::vif(SVSS_M1) #
+#SVSS_M1_Vif
+
+#exponentiating coeff for odds ratios
+SVSS_M1Exp <- SVSS_M1
+SVSS_M1Exp$coefficients <- exp(SVSS_M1Exp$coefficients)
+SVSS_M1Exp
+
+# pseudo R-squared
+SVSS_R1 <- (1-(SVSS_M1$deviance)/(SVSS_M1$null.deviance))
+SVSS_R1 <- round(SVSS_R1,2)
+SVSS_R1
+
+##Model All
+V1 <- stargazer(Dis_M1, SVSS_M1,
+                type="html",
+                omit=c("StateNumLG","fyDeclared"),
+                apply.coef=exp,
+                apply.ci=exp,
+                t.auto=F,
+                p.auto=F,
+                title="Logit Model Comparison", 
+                dep.var.labels = c("Ratio of felev"),
+                add.lines = list(c("State FE","Yes", "Yes"),
+                                 c("Year FE", "Yes", "Yes"),
+                                 c("Pseudo $R2$", Dis_R1, SVSS_R1)),
+                digits=2,
+                column.sep.width = "10pt",
+                #order=order,
+                single.row = FALSE,
+                align=TRUE,
+                out="C:/Users/lgero/Box/Research/FEMA_project/Results/myHMA10/DNZ_V1/felev/fs_dis_svss_fe.htm")
+
+```
+
+
+

@@ -1,0 +1,561 @@
+
+
+---
+title: "Supplementary Information: Descriptive Statistics"
+author: "Laura Geronimo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    toc_float: true
+    number_sections: true
+    theme: "default"
+
+---
+
+## Notes
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+getwd()
+
+##Libraries
+library(dplyr)
+library(stringr)
+library(Hmisc)
+library(tidycensus)
+library(corrplot)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(pastecs)
+library(car)
+library(gvlma)
+library(qcc)
+library(stargazer)
+library(viridis)
+
+library(forcats)
+library(boot)
+library(lmtest)
+library(sandwich)
+library(ggpubr)
+
+options (scipen=999)
+
+#importing data
+DNZ15 <- read.csv('H:/My Drive/Scarlet/Academic/Research/Data/Fused/V3/FS/DNZLevel/DNZ15/DNZ15.csv')
+
+names(DNZ15)
+DNZ15 <- DNZ15[,c(-1)]
+DNZ15_shore <- subset(DNZ15, ZCTA_shore==1)
+
+DNZ15_shore <- subset(DNZ15_shore, p2state!="Illinois" &
+                         p2state!="Indiana" & 
+                         p2state!="Kentucky" & 
+                         p2state!="Ohio" &
+                         p2state!="West Virginia")
+
+#Elevation subsets
+DNZ15E <- subset(DNZ15, Elev>0)
+DNZ15E_shore <- subset(DNZ15E, ZCTA_shore==1)
+DNZ15E_sandy <- subset(DNZ15E, namedStorm=="sandy")
+DNZ15E_hurricane <- DNZ15E %>%
+  filter(!is.na(HurricaneName))
+
+#Acquisition subsets
+DNZ15A <- subset(DNZ15, Acqui>0)
+DNZ15A_shore <- subset(DNZ15A, ZCTA_shore==1)
+DNZ15A_sandy <- subset(DNZ15A, namedStorm=="sandy")
+
+```
+
+#All DNZs
+
+## Heatmap: felev by deciles of fWhite and MHV
+```{r include=FALSE}
+
+# Create deciles for MHVadj_100k and fWhite
+DNZ15$MHVadj_100k_decile <- cut(DNZ15$MHVadj_100k, breaks=quantile(DNZ15$MHVadj_100k, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15$fWhite_decile <- cut(DNZ15$fWhite, breaks=quantile(DNZ15$fWhite, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ MHVadj_100k_decile + fWhite_decile, data=DNZ15, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("MHVadj_100k_decile", "fWhite_decile"))
+
+# Create the heatmap
+F1 <- ggplot(pivot_table_melt, aes(x=fWhite_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by MHV", x="Deciles of fWhite", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal()
+```
+
+
+## Heatmap: felev by deciles of MHV & RepRate
+```{r include=FALSE}
+
+# Create deciles for MHVadj_100k and RepRate
+DNZ15$MHVadj_100k_decile <- cut(DNZ15$MHVadj_100k, breaks=quantile(DNZ15$MHVadj_100k, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15$RepRate_decile <- cut(DNZ15$RepRate, breaks=quantile(DNZ15$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ MHVadj_100k_decile + RepRate_decile, data=DNZ15, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("MHVadj_100k_decile", "RepRate_decile"))
+
+# Create the heatmap
+F2 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="MHV by Political Ideology", x="Deciles of RepRate", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal()
+```
+
+
+## Heatmap: felev by deciles of fWhite & RepRate
+```{r include=FALSE}
+
+# Create deciles for fWhite and RepRate
+DNZ15$fWhite_decile <- cut(DNZ15$fWhite, breaks=quantile(DNZ15$fWhite, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15$RepRate_decile <- cut(DNZ15$RepRate, breaks=quantile(DNZ15$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ fWhite_decile + RepRate_decile, data=DNZ15, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("fWhite_decile", "RepRate_decile"))
+
+# Create the heatmap
+F3 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=fWhite_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by Political Ideology", x="Deciles of RepRate", y="Deciles of fWhite", fill="felev") +
+  theme_minimal()
+
+library(gridExtra)
+grid.arrange(F1,F2,F3, ncol=3)
+```
+
+
+
+## Heatmap: felev by deciles of MHV & RepRate
+```{r include=FALSE}
+
+# Create deciles for MHVadj_100k and RepRate
+DNZ15$MHVadj_100k_decile <- cut(DNZ15$MHVadj_100k, breaks=quantile(DNZ15$MHVadj_100k, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15$RepRate_decile <- cut(DNZ15$RepRate, breaks=quantile(DNZ15$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ MHVadj_100k_decile + RepRate_decile, data=DNZ15, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("MHVadj_100k_decile", "RepRate_decile"))
+
+# Create the heatmap
+F4 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="MHV by Political Ideology", x="Deciles of RepRate", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal()
+```
+
+
+## Heatmap: felev by deciles of fWhite & RepRate
+```{r include=FALSE}
+
+# Create deciles for fWhite and RepRate
+DNZ15$fWhite_decile <- cut(DNZ15$fWhite, breaks=quantile(DNZ15$fWhite, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15$RepRate_decile <- cut(DNZ15$RepRate, breaks=quantile(DNZ15$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ fWhite_decile + RepRate_decile, data=DNZ15, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("fWhite_decile", "RepRate_decile"))
+
+# Create the heatmap
+F5 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=fWhite_decile, fill=value)) +
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by Political Ideology", x="Deciles of RepRate", y="Deciles of fWhite", fill="felev") +
+  theme_minimal()
+
+library(gridExtra)
+grid.arrange(F1,F4,F5, ncol=3)
+```
+
+##Heatmap by state - full sample
+```{r include=FALSE}
+# Create deciles for MHVadj_100k and fWhite
+DNZ15$MHVadj_100k_decile <- cut(DNZ15$MHVadj_100k, breaks=quantile(DNZ15$MHVadj_100k, probs=seq(0, 1, 0.1), na.rm=TRUE), include.lowest=TRUE, labels=FALSE)
+DNZ15$fWhite_decile <- cut(DNZ15$fWhite, breaks=quantile(DNZ15$fWhite, probs=seq(0, 1, 0.1), na.rm=TRUE), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table including p2state
+pivot_table <- DNZ15 %>%
+  group_by(p2state, MHVadj_100k_decile, fWhite_decile) %>%
+  summarise(felev = mean(felev, na.rm=TRUE)) %>%
+  ungroup()
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("p2state", "MHVadj_100k_decile", "fWhite_decile"))
+
+# Create the heatmap with facet wrap
+F1 <- ggplot(pivot_table_melt, aes(x=fWhite_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by MHV", x="Deciles of fWhite", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal() +
+  facet_wrap(~ p2state, scales = "free")
+
+# Print the heatmap
+F1
+```
+
+#Shoreline DNZs
+## Heatmap: felev by deciles of fWhite and MHV
+```{r include=FALSE}
+table(DNZ15_shore$p2state)
+
+# Create deciles for MHVadj_100k and fWhite
+DNZ15_shore$MHVadj_100k_decile <- cut(DNZ15_shore$MHVadj_100k, breaks=quantile(DNZ15_shore$MHVadj_100k, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15_shore$fWhite_decile <- cut(DNZ15_shore$fWhite, breaks=quantile(DNZ15_shore$fWhite, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ MHVadj_100k_decile + fWhite_decile, data=DNZ15_shore, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("MHVadj_100k_decile", "fWhite_decile"))
+
+# Create the heatmap
+F1 <- ggplot(pivot_table_melt, aes(x=fWhite_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by MHV", x="Deciles of fWhite", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal()
+```
+
+
+## Heatmap: felev by deciles of MHV & RepRate
+```{r include=FALSE}
+
+# Create deciles for MHVadj_100k and RepRate
+DNZ15_shore$MHVadj_100k_decile <- cut(DNZ15_shore$MHVadj_100k, breaks=quantile(DNZ15_shore$MHVadj_100k, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15_shore$RepRate_decile <- cut(DNZ15_shore$RepRate, breaks=quantile(DNZ15_shore$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ MHVadj_100k_decile + RepRate_decile, data=DNZ15_shore, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("MHVadj_100k_decile", "RepRate_decile"))
+
+# Create the heatmap
+F2 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="MHV by Political Ideology", x="Deciles of RepRate", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal()
+```
+
+
+## Heatmap: felev by deciles of fWhite & RepRate
+```{r include=FALSE}
+
+# Create deciles for fWhite and RepRate
+DNZ15_shore$fWhite_decile <- cut(DNZ15_shore$fWhite, breaks=quantile(DNZ15_shore$fWhite, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+DNZ15_shore$RepRate_decile <- cut(DNZ15_shore$RepRate, breaks=quantile(DNZ15_shore$RepRate, probs=seq(0, 1, 0.1)), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table
+pivot_table <- aggregate(felev ~ fWhite_decile + RepRate_decile, data=DNZ15_shore, mean)
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("fWhite_decile", "RepRate_decile"))
+
+# Create the heatmap
+F3 <- ggplot(pivot_table_melt, aes(x=RepRate_decile, y=fWhite_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by Political Ideology", x="Deciles of RepRate", y="Deciles of fWhite", fill="felev") +
+  theme_minimal()
+
+library(gridExtra)
+grid.arrange(F1,F2,F3, ncol=3)
+```
+
+
+##Heatmap by state - shore sample
+```{r include=FALSE}
+DNZ15_shore <- subset(DNZ15_shore, p2state!="Illinois" &
+                         p2state!="Indiana" & 
+                         p2state!="Kentucky" & 
+                         p2state!="Ohio" &
+                         p2state!="West Virginia")
+
+# Create deciles for MHVadj_100k and fWhite
+DNZ15_shore$MHVadj_100k_decile <- cut(DNZ15_shore$MHVadj_100k, breaks=quantile(DNZ15_shore$MHVadj_100k, probs=seq(0, 1, 0.1), na.rm=TRUE), include.lowest=TRUE, labels=FALSE)
+DNZ15_shore$fWhite_decile <- cut(DNZ15_shore$fWhite, breaks=quantile(DNZ15_shore$fWhite, probs=seq(0, 1, 0.1), na.rm=TRUE), include.lowest=TRUE, labels=FALSE)
+
+# Create a pivot table including p2state
+pivot_table <- DNZ15_shore %>%
+  group_by(p2state, MHVadj_100k_decile, fWhite_decile) %>%
+  summarise(felev = mean(felev, na.rm=TRUE)) %>%
+  ungroup()
+
+# Reshape the data for ggplot
+pivot_table_melt <- melt(pivot_table, id.vars=c("p2state", "MHVadj_100k_decile", "fWhite_decile"))
+
+# Create the heatmap with facet wrap
+F1 <- ggplot(pivot_table_melt, aes(x=fWhite_decile, y=MHVadj_100k_decile, fill=value)) + 
+  geom_tile() + 
+  scale_fill_gradient(low="blue", high="red") + 
+  labs(title="Race by MHV", x="Deciles of fWhite", y="Deciles of MHVadj_100k", fill="felev") +
+  theme_minimal() +
+  facet_wrap(~ p2state, scales = "free")
+
+# Print the heatmap
+F1
+```
+
+
+
+
+#All DNZs
+## felev
+###State level analysis
+####Mean felev by fWhite_dec by state
+```{r include= FALSE}
+# Calculate deciles of fWhite for each p2state
+DNZ15 <- DNZ15 %>%
+  group_by(p2state) %>%
+  mutate(fWhite_decile = ntile(fWhite, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15 %>%
+  group_by(p2state, fWhite_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = fWhite_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of fWhite for each p2State",
+       x = "Deciles of fWhite",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+####Mean felev by MHVadj_100k_dec by state
+```{r include= FALSE}
+# Calculate deciles of MHVadj_100k for each p2state
+DNZ15 <- DNZ15 %>%
+  group_by(p2state) %>%
+  mutate(MHVadj_100k_decile = ntile(MHVadj_100k, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15 %>%
+  group_by(p2state, MHVadj_100k_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = MHVadj_100k_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of MHVadj_100k for each State",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+####Mean felev by mrp_ideology_dec by state
+```{r include= FALSE}
+# Calculate deciles ofmrp_ideology for each p2state
+DNZ15 <- DNZ15 %>%
+  group_by(p2state) %>%
+  mutate(mrp_ideology_decile = ntile(mrp_ideology, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15 %>%
+  group_by(p2state,mrp_ideology_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x =mrp_ideology_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of mrp_ideology for each State",
+       x = "Deciles of mrp_ideology",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+#Shore DNZs
+## felev
+###State level analysis
+####Mean felev by fWhite_dec by state
+```{r include= FALSE}
+# Calculate deciles of fWhite for each p2state
+DNZ15_shore <- DNZ15_shore %>%
+  group_by(p2state) %>%
+  mutate(fWhite_decile = ntile(fWhite, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15_shore %>%
+  group_by(p2state, fWhite_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = fWhite_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of fWhite for each p2State",
+       x = "Deciles of fWhite",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+####Mean felev by MHVadj_100k_dec by state
+```{r include= FALSE}
+# Calculate deciles of MHVadj_100k for each p2state
+DNZ15_shore <- DNZ15_shore %>%
+  group_by(p2state) %>%
+  mutate(MHVadj_100k_decile = ntile(MHVadj_100k, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15_shore %>%
+  group_by(p2state, MHVadj_100k_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = MHVadj_100k_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of MHVadj_100k for each State",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+####Mean felev by mrp_ideology_dec by state
+```{r include= FALSE}
+# Calculate deciles ofmrp_ideology for each p2state
+DNZ15_shore <- DNZ15_shore %>%
+  group_by(p2state) %>%
+  mutate(mrp_ideology_decile = ntile(mrp_ideology, 10))
+
+# Compute mean of Elev within each decile for each p2state
+mean_felev_data <- DNZ15_shore %>%
+  group_by(p2state,mrp_ideology_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x =mrp_ideology_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ p2state) +
+  labs(title = "Mean felev by Deciles of mrp_ideology for each State",
+       x = "Deciles of mrp_ideology",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+
+
+
+##GOT HERE ####
+
+#NOTE: Hurricanes need work
+
+### Hurricane level analysis
+####Mean flev by fWhite_dec by hurricane
+```{r include= FALSE}
+DNZ15_hurr<- DNZ15_hurr %>%
+  filter(!is.na(HurricaneName))
+
+# Calculate deciles of fWhite for each HurricaneName
+DNZ15_hurr <- DNZ15_hurr %>%
+  group_by(HurricaneName) %>%
+  mutate(fWhite_decile = ntile(fWhite, 10))
+
+# Compute mean of Elev within each decile for each HurricaneName
+mean_felev_data <- DNZ15_hurr %>%
+  group_by(HurricaneName, fWhite_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = fWhite_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ HurricaneName) +
+  labs(title = "Mean felev by Deciles of fWhite for each HurricaneName",
+       x = "Deciles of fWhite",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
+####Mean felev by MHVadj_100k_dec by hurricane
+```{r include= FALSE}
+# Calculate deciles of MHVadj_100k for each HurricaneName
+DNZ15_hurr <- DNZ15_hurr %>%
+  group_by(HurricaneName) %>%
+  mutate(MHVadj_100k_decile = ntile(MHVadj_100k, 10))
+
+# Compute mean of Elev within each decile for each HurricaneName
+mean_felev_data <- DNZ15_hurr %>%
+  group_by(HurricaneName, MHVadj_100k_decile) %>%
+  summarise(
+    mean_felev = mean(felev, na.rm = TRUE),
+    sem_felev = sd(felev, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ungroup()
+
+# Create the plot using facet_wrap
+ggplot(mean_felev_data, aes(x = MHVadj_100k_decile, y = mean_felev)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_felev - sem_felev, ymax = mean_felev + sem_felev), width = 0.2) +
+  facet_wrap(~ HurricaneName) +
+  labs(title = "Mean felev by Deciles of MHVadj_100k for each State",
+       x = "Deciles of MHVadj_100k",
+       y = "Mean felev") +
+  theme_minimal()
+```
+
