@@ -202,54 +202,13 @@ myHMA$propertyAction3 <- ifelse(myHMA$propertyAction2 %in% names(replacements), 
 table(myHMA$propertyAction)
 table(myHMA$propertyAction3)
 
+#subset to Single Family ####
+myHMA_SF <- subset(myHMA, structureType=="Single Family")
 
-#Simplifying typeOfResidency ####
-#examine NAs on typeOfResidency
-table(is.na(myHMA$typeOfResidency)) #73,545 missing
+#subset to Owner Occ- Principal Residence ####
+myHMA_SFOO <- subset(myHMA_SF, typeOfResidency=="Owner Occupied - Principal Residence")
 
-# Examining NAs on type of residency
-table(myHMA$typeOfResidency)
-NAs_Res <- myHMA %>% filter(is.na(typeOfResidency))
-
-# Obtain unique project type data on NAs_Res, which will be used for imputing missing residential type data (Private vs. Public)
-unique_p2projectType <- unique(NAs_Res$p2projectType)
-length(unique_p2projectType) # 214 unique
-NAs_Res2 <- data.frame(p2projectType = unique_p2projectType)
-
-# Classify project types
-NAs_Res2 <- NAs_Res2 %>%
-  mutate(my_Private = if_else(str_detect(p2projectType, "Private"), 1, 0),
-         my_Public = if_else(str_detect(p2projectType, "Public"), 1, 0))
-
-# Determine type of residency
-NAs_Res2 <- NAs_Res2 %>%
-  mutate(Total = my_Private + my_Public,
-         my_typeOfResidency = case_when(
-           Total == 1 & my_Private == 1 ~ "Private",
-           Total == 1 & my_Public == 1 ~ "Public",
-           Total == 0 ~ NA,
-           TRUE ~ "Mix"
-         ))
-
-NAs_Res3 <- NAs_Res2 %>% select(p2projectType, my_typeOfResidency)
-
-# Join with original data and update type of residency
-myHMA <- left_join(myHMA, NAs_Res3, by = "p2projectType")
-
-# Update my_typeOfResidency2 based on the original typeOfResidency
-myHMA<- myHMA%>%
-  mutate(typeOfResidency2 = if_else(is.na(typeOfResidency), my_typeOfResidency, typeOfResidency))
-
-table(myHMA$typeOfResidency)
-table(myHMA$typeOfResidency2)
-table(is.na(myHMA$typeOfResidency2))
-
-# Subset to primary and secondary & primary owner occupied, rental, and private 
-myHMA <- myHMA%>%
-  filter(typeOfResidency2 %in% c("Owner Occupied- Secondary Residence",
-                                    "Owner Occupied - Principal Residence",
-                                    "Rental",
-                                    "Private"))
+myHMA <- myHMA_SFOO 
 
 # Developing Hazards from projectType data ####
 
@@ -305,7 +264,7 @@ myHMA2 <-myHMA %>%
     projectIdentifier,
     propertyAction, propertyAction3,
     structureType,
-    typeOfResidency, typeOfResidency2,
+    typeOfResidency, 
     foundationType,
     programArea,
     programFy,
@@ -329,15 +288,15 @@ myHMA2 <-myHMA %>%
 
 colSums(is.na(myHMA2))
 
-# subset to Elevations and Acquisitions ####
+# subset to relevant Acquisitions & Elevations###
 table(myHMA2$propertyAction3)
 
-myHMA2b <- subset(myHMA2, 
-                  propertyAction3=="Acquisition" |
-                  propertyAction3=="Elevation")
+myHMA3 <- subset(myHMA2, 
+                 propertyAction3=="Acquisition" |
+                   propertyAction3=="Elevation" 
+                 )
 
-myHMA_NJ <- subset(myHMA2b, p2state=="New Jersey")
-myHMA_Ocean <- subset(myHMA2b, p2county=="Ocean" & p2state=="New Jersey")
+
 
 #archiving raw HMA data for replication ####
 #path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Archive")
@@ -345,5 +304,5 @@ myHMA_Ocean <- subset(myHMA2b, p2county=="Ocean" & p2state=="New Jersey")
 #write.csv(projects, file.path(path1, "HMA_Projects_07_03_24.csv"), row.names=TRUE)
 
 #writing out processed data ####
-path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA")
-write.csv(myHMA2b, file.path(path1, "myHMA.csv"), row.names=TRUE)
+path1 <- ("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/HMA_SFH")
+write.csv(myHMA3, file.path(path1, "myHMA.csv"), row.names=TRUE)

@@ -73,6 +73,9 @@ table(VARS_y2011acs$geography)
 
 ###SOURCING county Data####
 
+#social explorer pull 
+SE_PopDense <- read.csv('H:/My Drive/Scarlet/Academic/Research/Data/Census/SocialExplorerPull/County/SocialExplorerPull/Produced/SE_PopDense90_22.csv')
+
 ##2000 Decennial ####
 #not getting MOEs for these pulls
 y2000dec_sf1 <- get_decennial(geography = "county", 
@@ -544,7 +547,7 @@ y2022acs$y22_PovPct <- y2022acs$y22_PovE / y2022acs$y22_PovPopE
 ## y2000 ####
 names(y2000dec)
 range(y2000dec$GEOID)
-y2000dec$CntyID <- str_c("G",y2000dec$GEOID)
+y2000dec$CntyID <- str_c("C",y2000dec$GEOID)
 head(y2000dec$CntyID)
 
 
@@ -568,7 +571,7 @@ summary(y2000dec_2)
 ## y2010 ####
 names(y2010dec)
 range(y2010dec$GEOID)
-y2010dec$CntyID <- str_c("G",y2010dec$GEOID)
+y2010dec$CntyID <- str_c("C",y2010dec$GEOID)
 head(y2010dec$CntyID)
 
 y2010dec_2 <- y2010dec[c("CntyID",
@@ -591,8 +594,8 @@ summary(y2010dec_2)
 ## y2011 ####
 names(y2011acs)
 head(y2011acs$GEOID)
-y2011acs$CntyID <- substr(y2011acs$GEOID,3,7)
-y2011acs$CntyID <- str_c("G",y2011acs$CntyID)
+y2011acs$CntyID <- str_c("C",y2011acs$GEOID)
+head(y2011acs$CntyID)
 head(y2011acs$CntyID)
 
 y2011acs_2 <- y2011acs[c("CntyID",
@@ -613,8 +616,8 @@ summary(y2011acs_2)
 ## y2012 ####
 names(y2012acs)
 head(y2012acs$GEOID)
-y2012acs$CntyID <- substr(y2012acs$GEOID,3,7)
-y2012acs$CntyID <- str_c("G",y2012acs$CntyID)
+y2012acs$CntyID <- str_c("C",y2012acs$GEOID)
+head(y2012acs$CntyID)
 head(y2012acs$CntyID)
 
 y2012acs_2 <- y2012acs[c("CntyID",
@@ -636,7 +639,7 @@ summary(y2012acs_2)
 names(y2013acs)
 head(y2013acs$GEOID)
 range(y2013acs$GEOID)
-y2013acs$CntyID <- str_c("G",y2013acs$GEOID)
+y2013acs$CntyID <- str_c("C",y2013acs$GEOID)
 head(y2013acs$CntyID)
 
 y2013acs_2 <- y2013acs[c("CntyID",
@@ -659,7 +662,7 @@ summary(y2013acs_2)
 names(y2014acs)
 head(y2014acs$GEOID)
 range(y2014acs$GEOID)
-y2014acs$CntyID <- str_c("G",y2014acs$GEOID)
+y2014acs$CntyID <- str_c("C",y2014acs$GEOID)
 head(y2014acs$CntyID)
 
 y2014acs_2 <- y2014acs[c("CntyID",
@@ -681,7 +684,7 @@ summary(y2014acs_2)
 names(y2015acs)
 head(y2015acs$GEOID)
 range(y2015acs$GEOID)
-y2015acs$CntyID <- str_c("G",y2015acs$GEOID)
+y2015acs$CntyID <- str_c("C",y2015acs$GEOID)
 head(y2015acs$CntyID)
 
 y2015acs_2 <- y2015acs[c("CntyID",
@@ -703,7 +706,7 @@ summary(y2015acs_2)
 names(y2016acs)
 head(y2016acs$GEOID)
 range(y2016acs$GEOID)
-y2016acs$CntyID <- str_c("G",y2016acs$GEOID)
+y2016acs$CntyID <- str_c("C",y2016acs$GEOID)
 head(y2016acs$CntyID)
 
 y2016acs_2 <- y2016acs[c("CntyID",
@@ -726,7 +729,7 @@ summary(y2016acs_2)
 names(y2017acs)
 head(y2017acs$GEOID)
 range(y2017acs$GEOID)
-y2017acs$CntyID <- str_c("G",y2017acs$GEOID)
+y2017acs$CntyID <- str_c("C",y2017acs$GEOID)
 head(y2017acs$CntyID)
 
 y2017acs_2 <- y2017acs[c("CntyID",
@@ -749,7 +752,7 @@ summary(y2017acs_2)
 names(y2018acs)
 head(y2018acs$GEOID)
 range(y2018acs$GEOID)
-y2018acs$CntyID <- str_c("G",y2018acs$GEOID)
+y2018acs$CntyID <- str_c("C",y2018acs$GEOID)
 head(y2018acs$CntyID)
 
 y2018acs_2 <- y2018acs[c("CntyID",
@@ -771,7 +774,7 @@ summary(y2018acs_2)
 names(y2019acs)
 head(y2019acs$GEOID)
 range(y2019acs$GEOID)
-y2019acs$CntyID <- str_c("G",y2019acs$GEOID)
+y2019acs$CntyID <- str_c("C",y2019acs$GEOID)
 head(y2019acs$CntyID)
 
 y2019acs_2 <- y2019acs[c("CntyID",
@@ -793,7 +796,7 @@ summary(y2019acs_2)
 names(y2020acs)
 head(y2020acs$GEOID)
 range(y2020acs$GEOID)
-y2020acs$CntyID <- str_c("G",y2020acs$GEOID)
+y2020acs$CntyID <- str_c("C",y2020acs$GEOID)
 head(y2020acs$CntyID)
 
 y2020acs_2 <- y2020acs[c("CntyID",
@@ -816,7 +819,7 @@ summary(y2020acs_2)
 names(y2021acs)
 head(y2021acs$GEOID)
 range(y2021acs$GEOID)
-y2021acs$CntyID <- str_c("G",y2021acs$GEOID)
+y2021acs$CntyID <- str_c("C",y2021acs$GEOID)
 head(y2021acs$CntyID)
 
 y2021acs_2 <- y2021acs[c("CntyID",
@@ -838,7 +841,7 @@ summary(y2021acs_2)
 names(y2022acs)
 head(y2022acs$GEOID)
 range(y2022acs$GEOID)
-y2022acs$CntyID <- str_c("G",y2022acs$GEOID)
+y2022acs$CntyID <- str_c("C",y2022acs$GEOID)
 head(y2022acs$CntyID)
 
 y2022acs_2 <- y2022acs[c("CntyID",
@@ -878,39 +881,24 @@ TS_county_10 <- left_join(TS_county_9, y2020acs_2, by="CntyID", copy=F)
 TS_county_11 <- left_join(TS_county_10, y2021acs_2, by="CntyID", copy=F)
 TS_county_12 <- left_join(TS_county_11, y2022acs_2, by="CntyID", copy=F)
 
-############### GOT HERE #################
-#### Skipped the SE and NHGIS part
+TS_county_13 <- left_join(TS_county_12, SE_PopDense, by="CntyID", copy=F)
 
-##joining population density data derived from Social Explorer #### 
-SE_PD <- read.csv("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census/SE_PopDense00_22.csv")
+##NOTE: need  available 1990 data pulled from NHGIS or Social Explorer####
 
-TS_county_13 <- left_join(TS_county_12, SE_PD, by="CntyID", copy=F)
-
-##joining available 1990 data pulled from NHGIS ####
-y1990dec <- read.csv("C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census/y1990dec.csv")
-TS_county_14 <- left_join(TS_county_13, y1990dec , by="CntyID", copy=F)
-TS_county_14 <- TS_county_14 %>%
-  select(-c(X.x, X.y))
 
 ###############################################
 
 #checking Time series data ####
-names(TS_county_12)
-colSums(is.na(TS_county_14))
+names(TS_county_13)
+colSums(is.na(TS_county_13))
 
 
 #checking for duplicates in countys ####
-duplicates_county_Census <- TS_county_14 %>%
+duplicates_county_Census <- TS_county_13 %>%
   group_by(CntyID) %>%
-  filter(n() > 1)  #202 
-
-#obtaining distinct countys ####
-TS_county_14 <- TS_county_14 %>%
-  distinct(CntyID, .keep_all = TRUE)
-
+  filter(n() > 1)  #0
 
 
 #writing out files ####
-path1 <- 'C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census'
-write.csv(TS_county_14, file.path(path1, "TS_county_Tidy.csv"), row.names=TRUE)
-write.csv(OB_TS_county, file.path(path1, "OB_TS_county_Tidy.csv"), row.names=TRUE)
+path1 <- 'C:/Users/lgero/Box/Research/FEMA_project/Data/Edited/Census/County'
+write.csv(TS_county_13, file.path(path1, "TS_county_Tidy.csv"), row.names=TRUE)

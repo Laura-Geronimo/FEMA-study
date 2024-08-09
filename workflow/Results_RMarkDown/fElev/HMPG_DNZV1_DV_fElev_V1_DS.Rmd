@@ -734,7 +734,6 @@ create_error_plot <- function(data, x_var, y_var, x_label) {
 
 # Create each plot using the function
 M1 <- create_error_plot(DNZV1, "MHVadj_100k_dec", "felev", "Deciles: Median Home Value (100k)")
-
 M1 <- create_error_plot(DNZV1, "TotPop_10k_dec", "felev", "Dec: Tot. Pop. (10k)")
 M2 <- create_error_plot(DNZV1, "PopDense_1k_dec", "felev", "Dec: Pop. Dense (1k)")
 M3 <- create_error_plot(DNZV1, "fWhite_dec", "felev", "Dec: Fraction White")
@@ -743,7 +742,6 @@ M5 <- create_error_plot(DNZV1, "fHisp_dec", "felev", "Dec: Fraction Hispanic")
 M6 <- create_error_plot(DNZV1, "MHIadj_10k_dec", "felev", "Dec: MHI (10k)")
 M7 <- create_error_plot(DNZV1, "MHVadj_100k_dec", "felev", "Dec: MHV (100k)")
 M8 <- create_error_plot(DNZV1, "TotHU_10k_dec", "felev", "Dec: Tot. HU (10k)")
-
 M9 <- create_error_plot(DNZV1, "TotOccHU_10k_dec", "felev", "Dec: Tot. Occ. HU (10k)")
 M10 <- create_error_plot(DNZV1, "RepRate_dec", "felev", "Dec: County Republican Vote Rate")
 M11 <- create_error_plot(DNZV1, "mrp_ideology1_dec", "felev", "Dec: MPR Ideology")
